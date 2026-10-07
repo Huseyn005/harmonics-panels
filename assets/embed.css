@@ -70,7 +70,8 @@ body {
 
 /* Controls */
 .control { margin: 0 0 12px; }
-.control label { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-bottom: 4px; gap: 8px; }
+.control label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+.control label output { float: right; margin-left: 8px; }
 .control output, .val { font: 500 13px/1 var(--mono); color: var(--text); }
 input[type="range"] { width: 100%; accent-color: var(--gold); }
 .btn-row { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 12px; }
@@ -113,32 +114,88 @@ input[type="range"] { width: 100%; accent-color: var(--gold); }
 .eq { font: 500 14px/1.4 var(--mono); color: var(--gold); background: #1f2126; padding: 8px 10px; border-radius: 4px; display: inline-block; }
 .foot { font: 11px/1.4 var(--mono); color: #7e8592; margin-top: 12px; text-align: right; }
 
+/* Headers are never shown (the iPoster box already has the title) */
+.embed-head { display: none; }
+
+/* Thin scrollbar on the right of every embed */
+html { scrollbar-width: thin; scrollbar-color: #6a707b transparent; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #5b616b; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #7a8190; }
+
+/* Wide charts that need horizontal room get their own scroll box */
+.chart-scroll { overflow-x: auto; scrollbar-width: thin; }
+
 /* Narrow iframes (small iPoster cards) */
 @media (max-width: 520px) {
-  /* hide the iframe's own scrollbar (it still scrolls by touch/wheel) */
-  html, body { scrollbar-width: none; -ms-overflow-style: none; }
-  html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
-
-  /* use every pixel of the narrow frame */
-  body { font-size: 13px; min-height: 0; }
+  body { font-size: 13px; min-height: 0; background: var(--panel); }
   .embed { padding: 0; max-width: none; }
-  .embed-body { padding: 8px; border-radius: 0; }
+  .embed-body { padding: 8px 8px 10px; border-radius: 0; background: transparent; }
+  .lede { display: none; }
 
-  /* tabs on one swipeable row, no scrollbar */
-  .tabs { flex-wrap: nowrap; overflow-x: auto; gap: 2px; margin: 0 0 8px; scrollbar-width: none; }
+  /* tabs: one swipeable row */
+  .tabs { flex-wrap: nowrap; overflow-x: auto; gap: 0; margin: 0 0 8px; scrollbar-width: none; }
   .tabs::-webkit-scrollbar { display: none; }
-  .tab { flex: 0 0 auto; white-space: nowrap; padding: 8px 10px; font-size: 13px; }
+  .tab { flex: 0 0 auto; white-space: nowrap; padding: 7px 10px 8px; font-size: 12.5px; }
 
-  /* single column, tighter */
-  .grid-2, .grid-3 { grid-template-columns: 1fr; gap: 8px; }
-  .card { padding: 10px 12px; }
-  .stats { gap: 6px; margin-bottom: 8px; }
-  .stat { flex: 1 1 90px; padding: 6px 8px; }
-  .stat .v { font-size: 17px; }
-  .control { margin-bottom: 8px; }
-  .btn-row { gap: 4px; margin-bottom: 8px; }
-  .btn { padding: 6px 8px; font-size: 12px; }
-  .callout { font-size: 13px; padding: 6px 10px; }
-  .note, .legend { font-size: 11px; }
-  .foot { margin-top: 8px; }
+  /* single column, tight */
+  .grid-2, .grid-3 { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .grid-2 > *, .grid-3 > * { min-width: 0; }
+  .embed table { max-width: 100%; }
+  .card { padding: 9px 11px; }
+  .card h3 { font-size: 15px; }
+  .card p { font-size: 12.5px; }
+
+  /* button rows: one swipeable line instead of a tall stack */
+  .embed .btn-row, .embed .cfg { flex-wrap: nowrap; overflow-x: auto; gap: 4px; margin-bottom: 8px; scrollbar-width: none; }
+  .embed .btn-row::-webkit-scrollbar, .embed .cfg::-webkit-scrollbar { display: none; }
+  .embed .btn, .embed .cfg button { flex: 0 0 auto; white-space: nowrap; padding: 6px 9px; font-size: 12px; }
+
+  /* stat tiles */
+  .stats { gap: 5px; margin-bottom: 8px; }
+  .stat { flex: 1 1 0; min-width: 74px; padding: 5px 7px; }
+  .stat .k { font-size: 11px; }
+  .stat .v { font-size: 16px; }
+  .stat .v small { font-size: 10px; }
+
+  /* sliders */
+  .control { margin-bottom: 7px; }
+  .control label { font-size: 12px; margin-bottom: 2px; }
+  .control output, .val { font-size: 12px; }
+
+  /* charts: keep the whole figure visible, but make its text legible */
+  .chart text { font-size: 16.5px !important; }
+  .legend { gap: 4px 10px; font-size: 11px; margin-top: 5px; }
+  #chain { min-width: 560px; }
+  #chain text { font-size: 13px !important; }
+  #chain .sub { font-size: 10.5px !important; }
+
+  /* tables */
+  table { font-size: 11.5px; }
+  .embed .vtable { font-size: 10.5px; table-layout: fixed; }
+  .embed .vtable th:first-child, .embed .vtable td:first-child { width: 31%; }
+  .embed .vtable td, .embed .vtable th { overflow-wrap: anywhere; }
+  .embed .vtable th, .embed .vtable td { padding: 4px 2px; }
+  .embed .vtable th { font-size: 10px; }
+  .ptable { font-size: 12px; }
+
+  .callout { font-size: 12.5px; padding: 6px 9px; margin-top: 8px; }
+  .note { font-size: 11px; }
+  .foot { font-size: 10px; margin-top: 8px; }
+
+  /* Takeaways: compact flip cards, quiz options, roadmap */
+  .embed .flips { gap: 8px; }
+  .embed .flip, .embed .flip-in { min-height: 150px; }
+  .embed .face { padding: 10px 12px; }
+  .embed .front .n { font-size: 28px; }
+  .embed .front h3 { font-size: 15px; margin-top: 6px; }
+  .embed .front .hint { font-size: 11px; }
+  .embed .back p { font-size: 12px; }
+  .embed .back .big { font-size: 17px; }
+  .embed .opt { padding: 6px 9px; }
+  .embed .q h3 { font-size: 14px; }
+  .embed .road { padding-left: 22px; }
+  .embed .step::before { left: -20px; top: 12px; }
+  .embed .step h3 { font-size: 14px; }
 }
