@@ -93,3 +93,12 @@
 
   global.IP = { svg, text, clear, initTabs, tip, staircaseHarmonic, staircaseValue, thd, spectrum, SHE_ANGLES };
 })(window);
+
+// Wrap every figure in a scroll box (only scrolls when the figure is wider than the frame).
+document.querySelectorAll("svg.chart").forEach((s) => {
+  if (s.parentElement.classList.contains("chart-scroll")) return;
+  const w = document.createElement("div");
+  w.className = "chart-scroll";
+  s.parentNode.insertBefore(w, s);
+  w.appendChild(s);
+});
