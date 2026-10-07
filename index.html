@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>iPoster Interactive Objects · IAC-26,C3,IP,5,x111168</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="/assets/embed.css">
+<style>
+  .hub { max-width: 1100px; margin: 0 auto; padding: 28px 16px 40px; }
+  .hub h1 { font: 600 clamp(24px, 3.6vw, 34px)/1.2 var(--serif); margin: 6px 0 6px; }
+  .hub .sub { color: #c9d2e6; max-width: 80ch; margin: 0 0 22px; font: 16px/1.55 var(--serif); }
+  .links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  @media (max-width: 760px) { .links { grid-template-columns: 1fr; } }
+  .lk { background: var(--panel); border-radius: 4px; overflow: hidden; display: flex; flex-direction: column; }
+  .lk-head { background: var(--header); padding: 12px 16px; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .lk-head h2 { margin: 0; font: 600 20px/1.2 var(--serif); }
+  .lk-head span { font: 500 11px var(--mono); color: var(--gold); letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; }
+  .lk-body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+  .lk-body p { margin: 0; color: #d4d8df; font-size: 14px; }
+  .url { display: flex; gap: 6px; }
+  .url input { flex: 1; min-width: 0; background: #1f2126; border: 1px solid var(--line); color: var(--text); font: 13px var(--mono); padding: 8px 10px; border-radius: 4px; }
+  .frame { border: 1px solid var(--line); border-radius: 4px; width: 100%; height: 420px; background: var(--navy); display: none; }
+  .lk.open .frame { display: block; }
+  .steps { background: var(--panel); border-radius: 4px; padding: 16px 20px; margin: 0 0 22px; }
+  .steps ol { margin: 6px 0 0; padding-left: 20px; color: #d4d8df; }
+  .steps li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<main class="hub">
+  <div class="kicker">IAC 2026 · Antalya · iPosterSessions link objects</div>
+  <h1>Mitigation of Harmonic Distortion in Megawatt-Class Space PV Inverter Systems</h1>
+  <p class="sub">Interactive objects for each panel of the iPoster template. Every link below is a standalone page sized to drop straight into the matching panel.</p>
+
+  <div class="steps">
+    <div class="kicker">How to add one to your iPoster</div>
+    <ol>
+      <li>In the iPoster editor, open the panel (e.g. <b>The Filter Gap</b>) and add a <b>Link / Web page</b> object.</li>
+      <li>Press <b>Copy</b> next to the matching object below and paste the URL.</li>
+      <li>Save. Visitors who press <b>OPEN</b> get the full interactive view.</li>
+    </ol>
+  </div>
+
+  <div class="links" id="links"></div>
+</main>
+<script>
+const ITEMS = [
+  { path: "/embed/harmonics-in-space/", t: "Why Harmonics Matter in Space", s: "Panel 1", d: "Build a distorted wave and watch THD (Eq. 2) update live, see how more CHB levels clean the staircase, and flip between Earth and lunar-surface constraints." },
+  { path: "/embed/objectives/", t: "What We Set Out to Do", s: "Panel 2", d: "Expandable cards for the three objectives with their findings, a topology chooser (NPC / FC / CHB), and a rad-hard device calculator that derives 6 cells × 556 V → 4160 V." },
+  { path: "/embed/model-gallery/", t: "Model Gallery", s: "Panel 3", d: "Clickable Simulink signal chain with every block's parameters, plus an animated phase module showing the six cells building the 13-level SHE staircase." },
+  { path: "/embed/filter-gap/", t: "The Filter Gap", s: "Panel 4", d: "Live LCL frequency response. Tune L₁, L₂, C, R<sub>d</sub> and f<sub>sw</sub> to see why the 1.59 kHz resonance leaves the 19th–25th band uncovered, and what closing it would cost." },
+  { path: "/embed/she-vs-svpwm/", t: "SHE vs SVPWM", s: "Panel 5", d: "Head-to-head Table 4 metrics with a matched-frequency 'fair fight' toggle, the Figure 6 spectrum, and draggable SHE angles that break harmonic elimination live." },
+  { path: "/embed/takeaways/", t: "Takeaways & What's Next", s: "Panel 6", d: "Flip cards for the four key findings, a lunar-day irradiance explorer, the future-work roadmap, and a three-question audience quiz." },
+];
+const box = document.getElementById("links");
+box.innerHTML = ITEMS.map((it, i) => `
+  <article class="lk" id="lk${i}">
+    <div class="lk-head"><h2>${it.t}</h2><span>${it.s}</span></div>
+    <div class="lk-body">
+      <p>${it.d}</p>
+      <div class="url"><input readonly value="${location.origin + it.path}" aria-label="Link for ${it.t}"><button class="btn" data-copy="${i}">Copy</button></div>
+      <div class="btn-row" style="margin:0"><a class="btn" href="${it.path}" target="_blank" rel="noopener" style="text-decoration:none">Open ↗</a><button class="btn" data-prev="${i}" aria-pressed="false">Preview here</button></div>
+      <iframe class="frame" title="${it.t} preview" loading="lazy"></iframe>
+    </div>
+  </article>`).join("");
+box.querySelectorAll("[data-copy]").forEach((b) => b.addEventListener("click", async () => {
+  const input = b.previousElementSibling;
+  try { await navigator.clipboard.writeText(input.value); } catch { input.select(); document.execCommand("copy"); }
+  b.textContent = "Copied ✓"; setTimeout(() => (b.textContent = "Copy"), 1600);
+}));
+box.querySelectorAll("[data-prev]").forEach((b) => b.addEventListener("click", () => {
+  const card = document.getElementById("lk" + b.dataset.prev), fr = card.querySelector("iframe");
+  const open = !card.classList.contains("open");
+  if (open && !fr.src) fr.src = ITEMS[b.dataset.prev].path;
+  card.classList.toggle("open", open);
+  b.setAttribute("aria-pressed", open);
+}));
+</script>
+</body>
+</html>

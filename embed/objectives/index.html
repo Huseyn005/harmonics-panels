@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What We Set Out to Do — Interactive</title>
+<link rel="stylesheet" href="/assets/embed.css">
+<style>
+  .obj { cursor: pointer; transition: border-color .15s, transform .15s; position: relative; }
+  .obj:hover { border-color: #6a707b; }
+  .obj[aria-expanded="true"] { border-color: var(--gold); }
+  .obj .num { font: 600 34px/1 var(--serif); color: var(--gold); margin-bottom: 8px; }
+  .obj .more { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }
+  .obj[aria-expanded="true"] .more { display: block; }
+  .obj .hint { font-size: 12px; color: var(--muted); }
+  .obj[aria-expanded="true"] .hint { display: none; }
+  .topo { cursor: pointer; }
+  .topo[aria-pressed="true"] { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+  .topo .verdict { margin-top: 8px; }
+  .crit { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; font-size: 14px; margin-top: 8px; }
+  .crit span:nth-child(odd) { color: #d4d8df; }
+  .chain { display: flex; align-items: stretch; gap: 0; flex-wrap: wrap; margin: 6px 0 12px; }
+  .chain .lnk { flex: 1 1 150px; background: #1f2126; border: 1px solid var(--line); padding: 10px 12px; border-radius: 6px; margin: 4px; }
+  .chain .lnk .k { font-size: 12px; color: var(--muted); }
+  .chain .lnk .v { font: 500 20px/1.2 var(--mono); }
+  .gauge { height: 14px; border-radius: 7px; background: #1f2126; border: 1px solid var(--line); position: relative; overflow: hidden; margin: 6px 0 4px; }
+  .gauge > div { height: 100%; transition: width .2s, background .2s; }
+  select { background: #3b3f46; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 7px 8px; font: 14px var(--sans); width: 100%; }
+</style>
+</head>
+<body>
+<main class="embed">
+  <header class="embed-head">
+    <h1>What We Set Out to Do</h1>
+    <span class="tag">Interactive · Section 1.2 &amp; 3.1</span>
+  </header>
+  <section class="embed-body">
+    <p class="lede">Most studies treat the switching strategy and the filter as two separate design problems. We treat them as <b>one coupled problem</b>, constrained by mass, heat and space-qualified hardware.</p>
+
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" aria-selected="true" data-panel="p-obj">Three objectives</button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="p-topo">Choosing the topology</button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="p-size">Space-qualified sizing</button>
+    </div>
+
+    <div class="tabpanel" id="p-obj">
+      <div class="grid-3" id="objGrid"></div>
+      <p class="callout">Novelty: modulation strategy and filter design are evaluated <em>together</em>, within the mass and thermal limits of a planetary installation. To our knowledge this hadn't been done for megawatt-class surface power.</p>
+    </div>
+
+    <div class="tabpanel" id="p-topo" hidden>
+      <p class="lede" style="font-size:15px">Click a multilevel topology to see how it fares on the lunar surface.</p>
+      <div class="grid-3" id="topoGrid"></div>
+      <p class="callout" id="topoCallout"></p>
+    </div>
+
+    <div class="tabpanel" id="p-size" hidden>
+      <p class="lede" style="font-size:15px">Radiation-hardened power devices are rated far below their terrestrial counterparts. That one fact sets the cell count. Try it:</p>
+      <div class="grid-2">
+        <div>
+          <div class="control">
+            <label>Flight-qualified device</label>
+            <select id="device">
+              <option value="160">Rad-hard silicon · ~160 V</option>
+              <option value="650" selected>Rad-hard GaN · ~650 V</option>
+            </select>
+          </div>
+          <div class="control">
+            <label>DC bus voltage per cell <output id="vdcOut">556 V</output></label>
+            <input type="range" id="vdc" min="100" max="700" step="1" value="556">
+          </div>
+          <div class="control">
+            <label>Target AC output (line-to-line, RMS) <output>4160 V</output></label>
+          </div>
+          <div class="kicker">Device stress (cell DC ÷ device rating)</div>
+          <div class="gauge"><div id="stressBar"></div></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted)"><span id="stressTxt"></span><span id="stressPill"></span></div>
+        </div>
+        <div>
+          <div class="chain">
+            <div class="lnk"><div class="k">Phase peak needed</div><div class="v" id="vpk">3397 V</div></div>
+            <div class="lnk"><div class="k">Cells per phase</div><div class="v" id="ncell">6</div></div>
+            <div class="lnk"><div class="k">Output levels</div><div class="v" id="nlvl">13</div></div>
+            <div class="lnk"><div class="k">Cells (3 phases)</div><div class="v" id="ntot">18</div></div>
+          </div>
+          <p class="note">Cells = ⌈ V<sub>peak</sub> ÷ (M · 4/π · V<sub>dc</sub>) ⌉ with M = 0.8, V<sub>peak</sub> = 4160·√2/√3. Levels = 2 × cells + 1.</p>
+          <p class="callout" id="sizeCallout"></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="foot">IAC-26,C3,IP,5,x111168 · Mammadli &amp; Rasulzada · BHOS</div>
+  </section>
+</main>
+<script src="/assets/embed.js"></script>
+<script>
+IP.initTabs();
+
+const OBJ = [
+  { t: "Compare switching strategies", d: "Selective Harmonic Elimination (SHE) vs. Space Vector PWM (SVPWM) for a megawatt space inverter.",
+    how: "Three configurations at the rated point (M = 0.8): SHE at 300 Hz, SVPWM at the same 300 Hz, and SVPWM at its conventional 750 Hz.",
+    got: "At matched 300 Hz, SHE is marginally <b>better</b> (0.582% vs 0.657% current THD). SVPWM's big advantage comes from its higher switching frequency, not the method itself." },
+  { t: "Assess the passive LCL filter", d: "Can an LCL filter fit within the mass, size and thermal constraints of a surface installation?",
+    how: "L₁ = 3 mH, L₂ = 1.5 mH, C = 10 µF, R<sub>d</sub> = 3.3 Ω, sized from Z<sub>base</sub> ≈ 17.3 Ω at 4160 V / 1 MW.",
+    got: "Resonance lands at <b>1.59 kHz</b>, above the 19th–25th order residual band. The passive stage alone can't reach it, leaving a gap only active filtering can close." },
+  { t: "Check against standards", d: "Compare achieved harmonic levels with existing power-quality references.",
+    how: "THD by FFT up to the 50th order; MIL-STD-461G CE101 (30 Hz–10 kHz) as the benchmark for conducted emissions.",
+    got: "Low current THD alone does <b>not</b> prove compliance: CE101 limits absolute current, so the 19th–25th order residuals need a separate absolute-current check." },
+];
+document.getElementById("objGrid").innerHTML = OBJ.map((o, i) => `
+  <div class="card obj" role="button" tabindex="0" aria-expanded="false">
+    <div class="num">${["i", "ii", "iii"][i]}</div>
+    <h3>${o.t}</h3>
+    <p>${o.d}</p>
+    <div class="hint">Tap to see method &amp; finding ↓</div>
+    <div class="more"><div class="kicker">How</div><p>${o.how}</p><div class="kicker" style="margin-top:10px">What we found</div><p>${o.got}</p></div>
+  </div>`).join("");
+document.querySelectorAll(".obj").forEach((c) => {
+  const toggle = () => c.setAttribute("aria-expanded", c.getAttribute("aria-expanded") !== "true");
+  c.addEventListener("click", toggle);
+  c.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
+});
+
+const TOPO = [
+  { id: "npc", n: "Neutral Point Clamped", pros: "Low switching loss; common in PV.", cons: "DC-link capacitor voltages drift out of balance when irradiance swings, as in the lunar dawn-to-noon transition.",
+    score: [["Irradiance variability", "bad"], ["Mass", "warn"], ["MW scalability", "warn"]], verdict: ["bad", "Excluded"] },
+  { id: "fc", n: "Flying Capacitor", pros: "Flexible level control; inherent capacitor balancing.", cons: "Needs very large flying capacitors and complex charge-balancing control, which conflicts with the mass budget.",
+    score: [["Irradiance variability", "good"], ["Mass", "bad"], ["MW scalability", "warn"]], verdict: ["bad", "Excluded"] },
+  { id: "chb", n: "Cascaded H-Bridge", pros: "Modular, scalable to MW. Each cell is fed by its own PV sub-array, and a segmented array already provides those for free.", cons: "Needs multiple isolated DC sources, which is natural for a segmented PV field.",
+    score: [["Irradiance variability", "good"], ["Mass", "good"], ["MW scalability", "good"]], verdict: ["good", "Selected"] },
+];
+const LBL = { good: "Strong", warn: "Fair", bad: "Weak" };
+function drawTopo(sel) {
+  document.getElementById("topoGrid").innerHTML = TOPO.map((t) => `
+    <div class="card topo" role="button" tabindex="0" data-id="${t.id}" aria-pressed="${t.id === sel}">
+      <div class="kicker">${t.id.toUpperCase()}</div>
+      <h3>${t.n}</h3>
+      <p><b style="color:var(--good)">+</b> ${t.pros}</p>
+      <p><b style="color:var(--bad)">−</b> ${t.cons}</p>
+      <div class="crit">${t.score.map(([k, s]) => `<span>${k}</span><span class="pill ${s}">${LBL[s]}</span>`).join("")}</div>
+      <div class="verdict"><span class="pill ${t.verdict[0]}">${t.verdict[1]}</span></div>
+    </div>`).join("");
+  document.querySelectorAll(".topo").forEach((c) => {
+    c.addEventListener("click", () => drawTopo(c.dataset.id));
+    c.addEventListener("keydown", (e) => { if (e.key === "Enter") drawTopo(c.dataset.id); });
+  });
+  document.getElementById("topoCallout").textContent = {
+    npc: "NPC was excluded: capacitor balancing is fragile exactly when lunar irradiance is changing fastest.",
+    fc: "FC was excluded: its large flying capacitors work against the mass constraint that governs every surface design.",
+    chb: "CHB was chosen: 6 cells per phase at 556 V give a 13-level, 4160 V, 1 MW system with no extra isolation hardware.",
+  }[sel];
+}
+drawTopo("chb");
+
+const VPK = (4160 * Math.SQRT2) / Math.sqrt(3);
+function drawSize() {
+  const rating = +document.getElementById("device").value;
+  const vdc = +document.getElementById("vdc").value;
+  const n = Math.ceil(VPK / (0.8 * (4 / Math.PI) * vdc) - 1e-3);
+  const stress = vdc / rating;
+  document.getElementById("vdcOut").textContent = vdc + " V";
+  document.getElementById("vpk").textContent = Math.round(VPK) + " V";
+  document.getElementById("ncell").textContent = n;
+  document.getElementById("nlvl").textContent = 2 * n + 1;
+  document.getElementById("ntot").textContent = 3 * n;
+  const bar = document.getElementById("stressBar");
+  bar.style.width = Math.min(100, stress * 100) + "%";
+  const cls = stress > 1 ? "bad" : stress > 0.9 ? "warn" : "good";
+  bar.style.background = `var(--${cls})`;
+  document.getElementById("stressTxt").textContent = `${Math.round(stress * 100)}% of ${rating} V rating`;
+  document.getElementById("stressPill").innerHTML = `<span class="pill ${cls}">${stress > 1 ? "Exceeds rating" : stress > 0.9 ? "Thin margin" : "Within margin"}</span>`;
+  document.getElementById("sizeCallout").innerHTML = stress > 1
+    ? `A ${vdc} V cell would overstress a ${rating} V rad-hard device. Single-event effects make that unacceptable in space.`
+    : vdc === 556 && rating === 650
+      ? "This is the paper's design point: <b>556 V per cell</b> keeps GaN within margin, and <b>6 cells</b> reach the 4160 V medium-voltage bus."
+      : `${n} cells per phase (${2 * n + 1} levels) reach 4160 V at ${vdc} V per cell. Lower cell voltage means more cells; CHB's modularity makes that a direct consequence of space-qualified device limits.`;
+}
+document.getElementById("device").addEventListener("change", drawSize);
+document.getElementById("vdc").addEventListener("input", drawSize);
+drawSize();
+</script>
+</body>
+</html>

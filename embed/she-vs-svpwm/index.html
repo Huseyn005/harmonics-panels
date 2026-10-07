@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SHE vs SVPWM — Interactive</title>
+<link rel="stylesheet" href="/assets/embed.css">
+<style>
+  .cfg { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .cfg button { appearance: none; border: 1px solid var(--line); background: #1f2126; color: var(--text); border-radius: 6px; padding: 8px 12px; font: 500 13px var(--sans); cursor: pointer; display: flex; align-items: center; gap: 8px; }
+  .cfg button i { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+  .cfg button[aria-pressed="false"] { opacity: .45; }
+  .ang { display: grid; grid-template-columns: 34px 1fr 70px; gap: 10px; align-items: center; font-size: 13px; margin-bottom: 4px; }
+  .ang output { font-family: var(--mono); text-align: right; }
+  .vtable { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .vtable th, .vtable td { padding: 7px 6px; border-bottom: 1px solid var(--line); text-align: right; }
+  .vtable th:first-child, .vtable td:first-child { text-align: left; color: #c9ced6; }
+  .vtable th { font: 500 12px var(--sans); color: var(--muted); }
+  .vtable td { font-family: var(--mono); }
+  .vtable tr.hl td { background: rgba(240,195,90,.08); }
+</style>
+</head>
+<body>
+<main class="embed">
+  <header class="embed-head">
+    <h1>SHE vs SVPWM</h1>
+    <span class="tag">Interactive · Table 2, Table 4, Fig. 6</span>
+  </header>
+  <section class="embed-body">
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" aria-selected="true" data-panel="p-h2h">Head-to-head</button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="p-spec">Harmonic spectrum</button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="p-elim">Try the SHE angles</button>
+    </div>
+
+    <!-- Head to head -->
+    <div class="tabpanel" id="p-h2h">
+      <div class="cfg" id="cfgBtns"></div>
+      <div class="btn-row" id="metricBtns"></div>
+      <div class="grid-2">
+        <div>
+          <svg id="barChart" class="chart" viewBox="0 0 600 300" role="img" aria-label="Metric comparison bar chart"></svg>
+          <div class="btn-row" style="margin-top:10px">
+            <button class="btn" id="fair" aria-pressed="false">⚖ Fair fight: matched 300 Hz only</button>
+            <button class="btn" id="logBtn" aria-pressed="false">Log scale</button>
+          </div>
+        </div>
+        <div>
+          <table class="vtable" id="vtable"></table>
+          <p class="callout" id="insight"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Spectrum -->
+    <div class="tabpanel" id="p-spec" hidden>
+      <p class="lede" style="font-size:15px">Phase A load-current spectrum at the rated point (log scale). Hover a bar for its value.</p>
+      <svg id="specChart" class="chart" viewBox="0 0 720 320" role="img" aria-label="Harmonic spectrum"></svg>
+      <div class="legend"><span><i style="background:var(--she)"></i>SHE (300 Hz)</span><span><i style="background:var(--svpwm7)"></i>SVPWM (750 Hz, mf = 15)</span><span><i style="background:#8b919c"></i>Numerical noise floor ≈ 10⁻³ %</span></div>
+      <p class="callout">SHE pushes 3rd–17th content down to the numerical noise floor, then lets it pile up at the <b>19th</b> (≈0.45%). That's the first un-targeted order, and it sits below the LCL resonance.</p>
+      <p class="note">Bar heights are read from Figure 6 of the manuscript (approximate); headline numbers come from Table 4.</p>
+    </div>
+
+    <!-- Elimination -->
+    <div class="tabpanel" id="p-elim" hidden>
+      <p class="lede" style="font-size:15px">These six angles, solved with Newton–Raphson (fsolve) at M = 0.8, cancel the 5th, 7th, 11th, 13th and 17th harmonics of the ideal 13-level staircase. Nudge any angle and watch the elimination break. This is what happens off the design point.</p>
+      <div class="grid-2">
+        <div>
+          <svg id="elimChart" class="chart" viewBox="0 0 640 300" role="img" aria-label="Staircase harmonic amplitudes"></svg>
+          <div class="legend"><span><i style="background:var(--she)"></i>Targeted for elimination</span><span><i style="background:#8b919c"></i>Not targeted</span></div>
+        </div>
+        <div>
+          <div id="angSliders"></div>
+          <div class="stats" style="margin-top:10px">
+            <div class="stat"><div class="k">Modulation index M</div><div class="v" id="mOut">0.800</div></div>
+            <div class="stat"><div class="k">Worst targeted order</div><div class="v" id="worst">–</div></div>
+          </div>
+          <div class="btn-row"><button class="btn" id="resetAng">Reset to Table 2</button></div>
+        </div>
+      </div>
+      <p class="note">Computed live from the ideal quarter-wave-symmetric staircase: bₙ = (4V<sub>dc</sub>/nπ)·Σ cos(nα<sub>k</sub>). Triplen orders (3rd, 9th, 15th…) also cancel line-to-line in the three-wire connection.</p>
+    </div>
+
+    <div class="foot">IAC-26,C3,IP,5,x111168 · rated operating point, M = 0.8, LCL only</div>
+  </section>
+</main>
+<script src="/assets/embed.js"></script>
+<script>
+IP.initTabs();
+const $ = (id) => document.getElementById(id);
+
+/* ---------- data (Table 4) ---------- */
+const CFG = [
+  { id: "she", n: "SHE · 300 Hz", col: "#4f86e0" },
+  { id: "sv3", n: "SVPWM · 300 Hz", col: "#e6a33a" },
+  { id: "sv7", n: "SVPWM · 750 Hz", col: "#d8493e" },
+];
+const METRICS = {
+  ithd: { n: "Current THD", u: "%", v: { she: 0.582, sv3: 0.657, sv7: 0.023 } },
+  vthd: { n: "Voltage THD", u: "%", v: { she: 5.489, sv3: 7.305, sv7: 0.135 } },
+  ipk: { n: "Peak high-order current", u: "%", v: { she: 0.45, sv3: 0.43, sv7: 0.02 }, ord: { she: "19th", sv3: "25th", sv7: "19th" } },
+  vpk: { n: "Peak high-order voltage", u: "%", v: { she: 3.79, sv3: 4.71, sv7: 0.16 }, ord: { she: "19th", sv3: "25th", sv7: "19th" } },
+};
+const ROWS = [
+  ["Current THD (%)", "0.582", "0.657", "0.023"],
+  ["Max low-order I (3rd–15th)", "< 0.005", "< 0.009", "< 0.011"],
+  ["Peak high-order I", "0.45 (19th)", "0.43 (25th)", "0.02 (19th)"],
+  ["Voltage THD (%)", "5.489", "7.305", "0.135"],
+  ["Max low-order V (3rd–15th)", "< 0.006", "< 0.056", "< 0.047"],
+  ["Peak high-order V", "3.79 (19th)", "4.71 (25th)", "0.16 (19th)"],
+  ["V-THD ÷ I-THD", "9.4×", "11.1×", "5.9×"],
+];
+const on = { she: true, sv3: true, sv7: true };
+let metric = "ithd", logScale = false, fair = false;
+
+$("cfgBtns").innerHTML = CFG.map((c) => `<button data-c="${c.id}" aria-pressed="true"><i style="background:${c.col}"></i>${c.n}</button>`).join("");
+$("cfgBtns").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
+  on[b.dataset.c] = !on[b.dataset.c];
+  if (!Object.values(on).some(Boolean)) on[b.dataset.c] = true;
+  fair = false; drawBars();
+}));
+$("metricBtns").innerHTML = Object.entries(METRICS).map(([k, m]) => `<button class="btn" data-m="${k}" aria-pressed="${k === metric}">${m.n}</button>`).join("");
+$("metricBtns").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { metric = b.dataset.m; drawBars(); }));
+$("fair").addEventListener("click", () => {
+  fair = !fair;
+  Object.assign(on, fair ? { she: true, sv3: true, sv7: false } : { she: true, sv3: true, sv7: true });
+  drawBars();
+});
+$("logBtn").addEventListener("click", () => { logScale = !logScale; drawBars(); });
+
+function drawBars() {
+  $("fair").setAttribute("aria-pressed", fair);
+  $("logBtn").setAttribute("aria-pressed", logScale);
+  $("metricBtns").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.m === metric));
+  $("cfgBtns").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", on[b.dataset.c]));
+  const M = METRICS[metric], list = CFG.filter((c) => on[c.id]);
+  const el = $("barChart"); IP.clear(el);
+  const W = 600, H = 300, m = { l: 56, r: 16, t: 24, b: 44 };
+  const max = Math.max(...list.map((c) => M.v[c.id])) * 1.18;
+  const lo = 0.01, hi = 10;
+  const fy = logScale
+    ? (v) => H - m.b - (Math.log10(Math.max(lo, v) / lo) / Math.log10(hi / lo)) * (H - m.t - m.b)
+    : (v) => H - m.b - (v / max) * (H - m.t - m.b);
+  const ticks = logScale ? [0.01, 0.1, 1, 10] : [0, max / 4, max / 2, (3 * max) / 4];
+  ticks.forEach((t) => {
+    IP.svg("line", { x1: m.l, x2: W - m.r, y1: fy(t), y2: fy(t), class: "gridl" }, el);
+    IP.text(el, m.l - 6, fy(t) + 4, String(+t.toPrecision(2)), { "text-anchor": "end" });
+  });
+  IP.svg("line", { x1: m.l, x2: W - m.r, y1: H - m.b, y2: H - m.b, class: "axis" }, el);
+  IP.text(el, m.l, m.t - 8, M.n + " (" + M.u + " of fundamental)");
+  const slot = (W - m.l - m.r) / list.length, bw = Math.min(110, slot * 0.55);
+  list.forEach((c, i) => {
+    const x = m.l + slot * i + (slot - bw) / 2, v = M.v[c.id], y = fy(v);
+    const r = IP.svg("rect", { x, y: H - m.b, width: bw, height: 0, fill: c.col, rx: 3 }, el);
+    requestAnimationFrame(() => { r.style.transition = "all .45s ease"; r.setAttribute("y", y); r.setAttribute("height", H - m.b - y); });
+    IP.text(el, x + bw / 2, y - 7, v + (M.ord ? " @ " + M.ord[c.id] : ""), { "text-anchor": "middle", style: "fill:#f2f3f5;font-family:var(--mono);font-size:12px" });
+    IP.text(el, x + bw / 2, H - m.b + 18, c.n, { "text-anchor": "middle", style: "fill:#d4d8df;font-size:12px" });
+  });
+
+  $("vtable").innerHTML = `<tr><th>Metric (Phase A)</th>${CFG.map((c) => `<th style="color:${c.col}">${c.n}</th>`).join("")}</tr>` +
+    ROWS.map((r) => `<tr class="${(metric === "ithd" && r[0].startsWith("Current THD")) || (metric === "vthd" && r[0].startsWith("Voltage THD")) || (metric === "ipk" && r[0] === "Peak high-order I") || (metric === "vpk" && r[0] === "Peak high-order V") ? "hl" : ""}"><td>${r[0]}</td>${r.slice(1).map((v, i) => `<td style="opacity:${on[CFG[i].id] ? 1 : 0.35}">${v}</td>`).join("")}</tr>`).join("");
+
+  $("insight").innerHTML = fair
+    ? "<b>At matched 300 Hz switching, SVPWM does not beat SHE.</b> SHE is marginally ahead on both current (0.582% vs 0.657%) and voltage THD (5.489% vs 7.305%)."
+    : on.sv7 && (on.she || on.sv3)
+      ? "SVPWM at 750 Hz looks dramatically better, but that advantage comes almost entirely from its <b>higher switching frequency</b>, not the modulation method. Press <b>Fair fight</b> to compare like with like."
+      : "Voltage THD runs well above current THD in every case: the R–L load's impedance rises with harmonic order, so small 19th–25th residual currents become larger voltage harmonics.";
+}
+drawBars();
+
+/* ---------- spectrum (Fig. 6, approximate read-off) ---------- */
+const ORD = [3, 5, 7, 9, 11, 13, 15, 17, 19];
+const SPEC = {
+  she: [0.0042, 0.0016, 0.0012, 0.0011, 0.0008, 0.0011, 0.0005, 0.0008, 0.45],
+  sv7: [0.011, 0.0085, 0.0033, 0.0032, 0.0018, 0.0083, 0.0044, 0.0051, 0.011],
+};
+function drawSpec() {
+  const el = $("specChart"); IP.clear(el);
+  const W = 720, H = 320, m = { l: 62, r: 14, t: 16, b: 40 };
+  const lo = 1e-4, hi = 1, fy = (v) => H - m.b - (Math.log10(v / lo) / Math.log10(hi / lo)) * (H - m.t - m.b);
+  [1e-4, 1e-3, 1e-2, 1e-1, 1].forEach((t) => {
+    IP.svg("line", { x1: m.l, x2: W - m.r, y1: fy(t), y2: fy(t), class: "gridl" }, el);
+    IP.text(el, m.l - 6, fy(t) + 4, String(t), { "text-anchor": "end" });
+  });
+  IP.svg("line", { x1: m.l, x2: W - m.r, y1: fy(1e-3), y2: fy(1e-3), stroke: "#8b919c", "stroke-dasharray": "5 4" }, el);
+  IP.text(el, 14, m.t + (H - m.t - m.b) / 2, "% of fundamental", { transform: `rotate(-90 14 ${m.t + (H - m.t - m.b) / 2})`, "text-anchor": "middle" });
+  const slot = (W - m.l - m.r) / ORD.length, bw = slot * 0.32;
+  ORD.forEach((n, i) => {
+    const x0 = m.l + slot * i + slot / 2;
+    IP.text(el, x0, H - m.b + 18, n + (n === 3 ? "rd" : "th"), { "text-anchor": "middle" });
+    [["she", "#4f86e0", -1], ["sv7", "#d8493e", 0]].forEach(([k, col, off]) => {
+      const v = SPEC[k][i], y = fy(v);
+      const r = IP.svg("rect", { x: off ? x0 - bw - 1 : x0 + 1, y, width: bw, height: H - m.b - y, fill: col, rx: 2 }, el);
+      r.addEventListener("mousemove", (e) => IP.tip(`<b>${n}${n === 3 ? "rd" : "th"} harmonic · ${n * 50} Hz</b><br>${k === "she" ? "SHE (300 Hz)" : "SVPWM (750 Hz)"}: ≈${v}%${[5, 7, 11, 13, 17].includes(n) && k === "she" ? "<br><span style='color:#7fa6ea'>targeted by SHE</span>" : ""}${v < 1e-3 ? "<br><i>below noise floor</i>" : ""}`, e));
+      r.addEventListener("mouseleave", () => IP.tip(null));
+    });
+  });
+  IP.text(el, W / 2, H - 6, "Harmonic order", { "text-anchor": "middle" });
+}
+drawSpec();
+
+/* ---------- elimination check ---------- */
+const ang = IP.SHE_ANGLES.slice();
+$("angSliders").innerHTML = ang.map((a, i) => `<div class="ang"><span>α${i + 1}</span><input type="range" min="0" max="89" step="0.05" value="${a}" data-i="${i}"><output id="ao${i}">${a.toFixed(3)}°</output></div>`).join("");
+$("angSliders").querySelectorAll("input").forEach((s) => s.addEventListener("input", () => { ang[+s.dataset.i] = +s.value; drawElim(); }));
+$("resetAng").addEventListener("click", () => { IP.SHE_ANGLES.forEach((a, i) => (ang[i] = a)); $("angSliders").querySelectorAll("input").forEach((s, i) => (s.value = ang[i])); drawElim(); });
+
+const EO = [3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25], TARGET = [5, 7, 11, 13, 17];
+function drawElim() {
+  ang.forEach((a, i) => ($("ao" + i).textContent = a.toFixed(3) + "°"));
+  const b1 = IP.staircaseHarmonic(ang, 1);
+  $("mOut").textContent = (b1 / (6 * 4 / Math.PI)).toFixed(3);
+  const pct = EO.map((n) => Math.abs(IP.staircaseHarmonic(ang, n) / b1) * 100);
+  const worstI = TARGET.reduce((best, n) => (pct[EO.indexOf(n)] > pct[EO.indexOf(best)] ? n : best), TARGET[0]);
+  const wv = pct[EO.indexOf(worstI)];
+  $("worst").innerHTML = `${worstI}th <small>${wv < 1e-3 ? "≈ 0" : wv.toFixed(2) + "%"}</small>`;
+
+  const el = $("elimChart"); IP.clear(el);
+  const W = 640, H = 300, m = { l: 52, r: 12, t: 18, b: 40 };
+  const lo = 1e-3, hi = 30, fy = (v) => H - m.b - (Math.log10(Math.max(lo, v) / lo) / Math.log10(hi / lo)) * (H - m.t - m.b);
+  [1e-3, 1e-2, 0.1, 1, 10].forEach((t) => {
+    IP.svg("line", { x1: m.l, x2: W - m.r, y1: fy(t), y2: fy(t), class: "gridl" }, el);
+    IP.text(el, m.l - 6, fy(t) + 4, String(t), { "text-anchor": "end" });
+  });
+  IP.text(el, m.l, m.t - 4, "% of fundamental (log) · ideal staircase, before filter");
+  const slot = (W - m.l - m.r) / EO.length, bw = slot * 0.6;
+  EO.forEach((n, i) => {
+    const x = m.l + slot * i + (slot - bw) / 2, v = pct[i], y = fy(v);
+    const tgt = TARGET.includes(n);
+    IP.svg("rect", { x, y, width: bw, height: Math.max(1, H - m.b - y), fill: tgt ? "#4f86e0" : "#6b717c", rx: 2 }, el);
+    IP.text(el, x + bw / 2, H - m.b + 16, n, { "text-anchor": "middle", style: tgt ? "fill:#7fa6ea;font-weight:600" : "" });
+    if (tgt && v < 1e-3) IP.text(el, x + bw / 2, H - m.b - 6, "✓", { "text-anchor": "middle", style: "fill:#4cc38a;font-size:13px" });
+  });
+  IP.text(el, W / 2, H - 6, "Harmonic order", { "text-anchor": "middle" });
+}
+drawElim();
+</script>
+</body>
+</html>

@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Takeaways &amp; What's Next — Interactive</title>
+<link rel="stylesheet" href="/assets/embed.css">
+<style>
+  .flips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  @media (max-width: 640px) { .flips { grid-template-columns: 1fr; } }
+  .flip { perspective: 1000px; min-height: 220px; cursor: pointer; }
+  .flip-in { position: relative; width: 100%; height: 100%; min-height: 220px; transition: transform .55s cubic-bezier(.2,.7,.2,1); transform-style: preserve-3d; }
+  .flip.on .flip-in { transform: rotateY(180deg); }
+  .face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 6px; padding: 16px 18px; border: 1px solid var(--line); display: flex; flex-direction: column; }
+  .front { background: linear-gradient(160deg, #22407f 0%, #17346e 100%); }
+  .front .n { font: 600 40px/1 var(--serif); color: var(--gold); }
+  .front h3 { font: 600 19px/1.3 var(--serif); margin: 10px 0 0; }
+  .front .hint { margin-top: auto; font-size: 12px; color: #b9c4dc; }
+  .back { background: var(--panel-2); transform: rotateY(180deg); overflow: auto; }
+  .back p { font-size: 14px; color: #dfe3ea; margin: 0 0 8px; }
+  .back .big { font: 500 22px/1.2 var(--mono); color: var(--gold); margin-bottom: 6px; }
+  @media (prefers-reduced-motion: reduce) { .flip-in { transition: none; } }
+
+  .road { position: relative; padding-left: 28px; }
+  .road::before { content: ""; position: absolute; left: 9px; top: 6px; bottom: 6px; width: 2px; background: var(--line); }
+  .step { position: relative; margin-bottom: 10px; cursor: pointer; }
+  .step::before { content: ""; position: absolute; left: -25px; top: 16px; width: 14px; height: 14px; border-radius: 50%; background: var(--panel); border: 2px solid var(--muted); }
+  .step.done::before { background: var(--good); border-color: var(--good); }
+  .step.next::before { border-color: var(--gold); }
+  .step .more { display: none; margin-top: 8px; }
+  .step[aria-expanded="true"] .more { display: block; }
+  .step[aria-expanded="true"] { border-color: var(--gold); }
+
+  .q { margin-bottom: 14px; }
+  .q h3 { font-size: 16px; }
+  .opt { display: block; width: 100%; text-align: left; margin: 6px 0; }
+  .opt.right { background: rgba(76,195,138,.18); border-color: var(--good); }
+  .opt.wrong { background: rgba(229,96,79,.16); border-color: var(--bad); }
+  .fb { font-size: 13px; color: #d4d8df; margin-top: 4px; min-height: 1em; }
+</style>
+</head>
+<body>
+<main class="embed">
+  <header class="embed-head">
+    <h1>Takeaways &amp; What's Next</h1>
+    <span class="tag">Interactive · Sections 5–7</span>
+  </header>
+  <section class="embed-body">
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" aria-selected="true" data-panel="p-take">Key takeaways</button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="p-day">Across the lunar day</button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="p-road">Roadmap</button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="p-quiz">Quick quiz</button>
+    </div>
+
+    <div class="tabpanel" id="p-take">
+      <p class="lede" style="font-size:15px">The biggest lesson: <b>switching frequency and modulation strategy are two different variables.</b> Tap a card to reveal the evidence.</p>
+      <div class="flips" id="flips"></div>
+    </div>
+
+    <div class="tabpanel" id="p-day" hidden>
+      <p class="lede" style="font-size:15px">Every result here is anchored to lunar noon (1360 W/m², M = 0.8). Slide toward dawn to see what changes and what is still to be measured.</p>
+      <svg id="sky" class="chart" viewBox="0 0 700 220" role="img" aria-label="Sun position across the lunar day"></svg>
+      <div class="control" style="margin-top:12px">
+        <label>Solar irradiance <output id="irrOut">1360 W/m²</output></label>
+        <input type="range" id="irr" min="200" max="1360" step="10" value="1360">
+      </div>
+      <div class="grid-2">
+        <div class="stats">
+          <div class="stat"><div class="k">Share of rated</div><div class="v" id="pctOut">100%</div></div>
+          <div class="stat"><div class="k">Study status</div><div class="v" style="font-size:15px;padding-top:6px" id="statusOut"></div></div>
+        </div>
+        <div class="callout" id="dayTxt" style="margin:0"></div>
+      </div>
+    </div>
+
+    <div class="tabpanel" id="p-road" hidden>
+      <div class="road" id="road"></div>
+    </div>
+
+    <div class="tabpanel" id="p-quiz" hidden>
+      <div id="quiz"></div>
+      <div class="stats"><div class="stat"><div class="k">Your score</div><div class="v" id="score">0 / 3</div></div></div>
+      <button class="btn" id="retry">Try again</button>
+    </div>
+
+    <div class="foot">IAC-26,C3,IP,5,x111168 · Mammadli &amp; Rasulzada · BHOS · Supported by T3 Vakfı IAC 2026 Young Researcher Support Program</div>
+  </section>
+</main>
+<script src="/assets/embed.js"></script>
+<script>
+IP.initTabs();
+const $ = (id) => document.getElementById(id);
+
+/* ---------- flip cards ---------- */
+const CARDS = [
+  { h: "Is SVPWM really better than SHE?", big: "0.582% vs 0.657%", p: "At matched 300 Hz switching, SHE is marginally <b>ahead</b> on current THD. SVPWM's 0.023% only appears at 750 Hz, so its edge comes from switching faster, not from the method." },
+  { h: "Where does the leftover distortion go?", big: "19th–25th order", p: "In every configuration the dominant residual sits at or above the 19th harmonic, below the 1.59 kHz LCL resonance, in a band passive filtering alone can't reach." },
+  { h: "Why is voltage THD so much higher?", big: "≈ 9–11×", p: "The R–L load's impedance rises with harmonic order (|Zₙ| ≈ R + jnωL), turning small high-order residual currents into much larger voltage harmonics." },
+  { h: "Does low THD mean standards compliance?", big: "Not by itself", p: "MIL-STD-461G CE101 limits <b>absolute</b> conducted current. At megawatt scale, a small THD ratio can still be a sizeable current. The 19th–25th orders need a direct check." },
+];
+$("flips").innerHTML = CARDS.map((c, i) => `
+  <div class="flip" role="button" tabindex="0" aria-label="${c.h}">
+    <div class="flip-in">
+      <div class="face front"><div class="n">0${i + 1}</div><h3>${c.h}</h3><div class="hint">Tap to reveal ↻</div></div>
+      <div class="face back"><div class="kicker">Finding</div><div class="big">${c.big}</div><p>${c.p}</p></div>
+    </div>
+  </div>`).join("");
+document.querySelectorAll(".flip").forEach((f) => {
+  f.addEventListener("click", () => f.classList.toggle("on"));
+  f.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); f.classList.toggle("on"); } });
+});
+
+/* ---------- lunar day ---------- */
+const sky = $("sky");
+function drawDay() {
+  const g = +$("irr").value, pct = g / 1360;
+  $("irrOut").textContent = g + " W/m²";
+  $("pctOut").textContent = Math.round(pct * 100) + "%";
+  IP.clear(sky);
+  const W = 700, H = 220, cx = W / 2, base = 190, R = 160;
+  const grad = IP.svg("linearGradient", { id: "gnd", x1: 0, y1: 0, x2: 0, y2: 1 }, IP.svg("defs", {}, sky));
+  IP.svg("stop", { offset: 0, "stop-color": "#4a4d55" }, grad); IP.svg("stop", { offset: 1, "stop-color": "#25272c" }, grad);
+  for (let i = 0; i < 40; i++) IP.svg("circle", { cx: (i * 137) % W, cy: (i * 53) % 150, r: (i % 3) * 0.4 + 0.4, fill: "#fff", opacity: 0.35 }, sky);
+  IP.svg("path", { d: `M${cx - R},${base} A${R},${R} 0 0 1 ${cx + R},${base}`, fill: "none", stroke: "#555a63", "stroke-dasharray": "3 5" }, sky);
+  // threshold zone 20–25% of rated, on the left (dawn) half of the arc
+  const angFor = (p) => Math.asin(Math.min(1, p)); // elevation proxy: irradiance ∝ sin(elevation)
+  const pt = (el) => [cx - R * Math.cos(el), base - R * Math.sin(el)];
+  const [x1, y1] = pt(angFor(0.2)), [x2, y2] = pt(angFor(0.25));
+  IP.svg("path", { d: `M${x1},${y1} A${R},${R} 0 0 1 ${x2},${y2}`, fill: "none", stroke: "#f0a04b", "stroke-width": 6, "stroke-linecap": "round", opacity: 0.8 }, sky);
+  IP.text(sky, x1 - 8, y1 + 4, "20–25% rated", { "text-anchor": "end", style: "fill:#f0a04b" });
+  IP.svg("rect", { x: 0, y: base, width: W, height: H - base, fill: "url(#gnd)" }, sky);
+  IP.text(sky, cx - R, base + 18, "dawn ~200 W/m²", { "text-anchor": "middle" });
+  IP.text(sky, cx, base - R - 10, "lunar noon 1360 W/m²", { "text-anchor": "middle" });
+  const [sx, sy] = pt(angFor(pct));
+  IP.svg("circle", { cx: sx, cy: sy, r: 22, fill: "#f0c35a", opacity: 0.15 }, sky);
+  IP.svg("circle", { cx: sx, cy: sy, r: 11, fill: "#f6d27a" }, sky);
+  // PV array silhouette
+  for (let i = 0; i < 6; i++) IP.svg("rect", { x: cx - 110 + i * 38, y: base - 14, width: 30, height: 9, fill: "#2f5bb7", stroke: "#7fa6ea", "stroke-width": 0.6, transform: `skewX(-25)` }, sky);
+
+  let status, txt;
+  if (g >= 1350) {
+    status = '<span class="pill good">Evaluated</span>';
+    txt = "Rated point: SHE angles are exact (residual 3.36 × 10⁻⁹), targeted low-order harmonics sit at the noise floor, and residual THD concentrates at the 19th order and above.";
+  } else if (pct > 0.25) {
+    status = '<span class="pill warn">Future work</span>';
+    txt = "Off the design point, M must fall with irradiance. The Table 2 angles no longer satisfy the elimination condition, so the low-order spectrum is expected to start repopulating. Quantifying that is the first extension.";
+  } else {
+    status = '<span class="pill bad">Future work</span>';
+    txt = "Below ~20–25% of rated, theory predicts a pronounced, non-linear rise in current THD (control non-linearities, limited PWM resolution, no stabilising grid impedance). Active filtering becomes essential here.";
+  }
+  $("statusOut").innerHTML = status;
+  $("dayTxt").innerHTML = txt;
+}
+$("irr").addEventListener("input", drawDay);
+drawDay();
+
+/* ---------- roadmap ---------- */
+const ROAD = [
+  { s: "done", k: "Completed", t: "Rated-point baseline", p: "13-level CHB, 1 MW, 4160 V. SHE (300 Hz) vs SVPWM (300 Hz & 750 Hz) with passive LCL filtering, FFT to the 50th harmonic." },
+  { s: "next", k: "Next · Extension 1", t: "Full lunar irradiance sweep", p: "Single-diode PV model with irradiance-dependent I–V and quasi-static ideal MPPT, swept from ~200 W/m² (dawn) to 1360 W/m² (noon), to measure how the low-order spectrum repopulates." },
+  { s: "next", k: "Next · Extension 2", t: "Active filter aimed at the 19th–25th band", p: "Retarget the dq-frame APF from the conventional 3rd–7th range to the 19th–25th residual band that sits below the LCL resonance, then report the compensation effectiveness metric." },
+  { s: "next", k: "Next · Compliance", t: "Absolute-current CE101 check", p: "Evaluate MIL-STD-461G CE101 (110 dBµA below 1 kHz, falling to 90 dBµA at 10 kHz) on the absolute 19th–25th order currents, plus LCL mass and volume estimates." },
+];
+$("road").innerHTML = ROAD.map((r) => `<div class="card step ${r.s}" role="button" tabindex="0" aria-expanded="false"><div class="kicker">${r.k}</div><h3>${r.t}</h3><div class="more"><p>${r.p}</p></div></div>`).join("");
+document.querySelectorAll(".step").forEach((s) => {
+  const t = () => s.setAttribute("aria-expanded", s.getAttribute("aria-expanded") !== "true");
+  s.addEventListener("click", t);
+  s.addEventListener("keydown", (e) => { if (e.key === "Enter") t(); });
+});
+document.querySelector(".step").setAttribute("aria-expanded", "true");
+
+/* ---------- quiz ---------- */
+const QUIZ = [
+  { q: "At the same 300 Hz switching frequency, which strategy gave lower current THD?", o: ["SVPWM", "SHE", "They were identical"], a: 1, e: "SHE: 0.582% vs 0.657% for SVPWM." },
+  { q: "Why can't the passive LCL filter remove the 19th–25th harmonics?", o: ["They lie below its 1.59 kHz resonance", "They are DC components", "The filter is undamped"], a: 0, e: "950–1250 Hz sits below resonance, where the LCL offers little attenuation and can amplify." },
+  { q: "Why was the Cascaded H-Bridge chosen?", o: ["Fewest switches", "Modular, MW-scalable and fed naturally by segmented PV sub-arrays", "No DC sources needed"], a: 1, e: "Plus rad-hard device voltage limits make many low-voltage cells the natural fit." },
+];
+let answered = {};
+function drawQuiz() {
+  answered = {};
+  $("quiz").innerHTML = QUIZ.map((q, i) => `<div class="card q"><div class="kicker">Question ${i + 1}</div><h3>${q.q}</h3>${q.o.map((o, j) => `<button class="btn opt" data-q="${i}" data-o="${j}">${o}</button>`).join("")}<div class="fb" id="fb${i}"></div></div>`).join("");
+  $("score").textContent = "0 / 3";
+  document.querySelectorAll(".opt").forEach((b) => b.addEventListener("click", () => {
+    const qi = +b.dataset.q, oi = +b.dataset.o;
+    if (qi in answered) return;
+    answered[qi] = oi === QUIZ[qi].a;
+    document.querySelectorAll(`.opt[data-q="${qi}"]`).forEach((x) => { if (+x.dataset.o === QUIZ[qi].a) x.classList.add("right"); });
+    if (!answered[qi]) b.classList.add("wrong");
+    $("fb" + qi).innerHTML = (answered[qi] ? "✓ Correct. " : "✗ Not quite. ") + QUIZ[qi].e;
+    $("score").textContent = Object.values(answered).filter(Boolean).length + " / 3";
+  }));
+}
+$("retry").addEventListener("click", drawQuiz);
+drawQuiz();
+</script>
+</body>
+</html>

@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Model Gallery — Interactive</title>
+<link rel="stylesheet" href="/assets/embed.css">
+<style>
+  .blk { cursor: pointer; }
+  .blk rect { fill: #33363c; stroke: #5b616b; stroke-width: 1.2; transition: fill .15s, stroke .15s; }
+  .blk:hover rect { stroke: #9aa1ac; }
+  .blk.on rect { fill: #3a3424; stroke: var(--gold); stroke-width: 2; }
+  .blk text { fill: var(--text) !important; font-size: 12.5px !important; font-weight: 500; pointer-events: none; }
+  .blk .sub { fill: var(--muted) !important; font-size: 10.5px !important; font-weight: 400; }
+  .blk.future rect { stroke-dasharray: 5 4; fill: #2a2c31; }
+  .wire { stroke: #7a8190; stroke-width: 1.5; fill: none; marker-end: url(#arr); }
+  .wire.flow { stroke: var(--gold); stroke-dasharray: 6 8; animation: flow 1.2s linear infinite; }
+  @keyframes flow { to { stroke-dashoffset: -14; } }
+  @media (prefers-reduced-motion: reduce) { .wire.flow { animation: none; } }
+  #detail h3 { font-size: 20px; }
+  .ptable { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-top: 6px; }
+  .ptable td { padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .ptable td:last-child { text-align: right; font-family: var(--mono); color: var(--text); }
+  .ptable td:first-child { color: #c9ced6; }
+  .cellrow { display: grid; grid-template-columns: 74px 1fr 52px; align-items: center; gap: 10px; margin: 0 0 6px; font-size: 13px; }
+  .cellbar { height: 18px; background: #1f2126; border: 1px solid var(--line); border-radius: 3px; position: relative; overflow: hidden; }
+  .cellbar > div { position: absolute; top: 0; bottom: 0; width: 100%; transition: background .08s; }
+  .cellstate { font-family: var(--mono); text-align: right; }
+</style>
+</head>
+<body>
+<main class="embed">
+  <header class="embed-head">
+    <h1>Model Gallery</h1>
+    <span class="tag">Interactive · Simulink model, Fig. 1–4</span>
+  </header>
+  <section class="embed-body">
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" aria-selected="true" data-panel="p-chain">Explore the system</button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="p-cell">Inside one phase module</button>
+    </div>
+
+    <div class="tabpanel" id="p-chain">
+      <p class="lede" style="font-size:15px">Click any block of the three-phase, 13-level CHB model to see what it does and how it was configured.</p>
+      <svg id="chain" class="chart" viewBox="0 0 960 300" role="img" aria-label="System signal chain"></svg>
+      <div class="card" id="detail" style="margin-top:12px"></div>
+    </div>
+
+    <div class="tabpanel" id="p-cell" hidden>
+      <p class="lede" style="font-size:15px">Each phase stacks six H-bridge cells (Fig. 2). Every cell switches on at its own SHE angle α<sub>k</sub> (Table 2), and their sum builds the 13-level staircase.</p>
+      <div class="grid-2">
+        <div>
+          <svg id="stairChart" class="chart" viewBox="0 0 640 300" role="img" aria-label="Phase output staircase being built over one cycle"></svg>
+          <div class="btn-row" style="margin-top:10px">
+            <button class="btn" id="play" aria-pressed="true">❚❚ Pause</button>
+            <button class="btn" id="slow">Speed: 1×</button>
+          </div>
+          <div class="control">
+            <label>Electrical angle θ <output id="thOut">0°</output></label>
+            <input type="range" id="theta" min="0" max="360" step="0.5" value="0">
+          </div>
+        </div>
+        <div>
+          <div class="kicker">Cell states · 556 V each</div>
+          <div id="cells"></div>
+          <div class="stats" style="margin-top:12px">
+            <div class="stat"><div class="k">Phase output</div><div class="v" id="vout">0 V</div></div>
+            <div class="stat"><div class="k">Level</div><div class="v" id="lvl">0</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="foot">IAC-26,C3,IP,5,x111168 · MATLAB/Simulink · ode3, 1 µs fixed step</div>
+  </section>
+</main>
+<script src="/assets/embed.js"></script>
+<script>
+IP.initTabs();
+
+/* ---------- signal chain ---------- */
+const BLOCKS = [
+  { id: "theta", x: 20, y: 120, w: 110, h: 60, t: "θ generator", s: "time ramp → 3-phase",
+    h3: "3-phase θ generator", p: "A time ramp drives three electrical-angle signals, 120° apart, that synchronise the modulators of phases A, B and C.",
+    rows: [["Fundamental frequency", "50 Hz"], ["Phase displacement", "120°"]] },
+  { id: "mod", x: 160, y: 120, w: 120, h: 60, t: "Modulator", s: "SHE or SVPWM",
+    h3: "3-phase modulator (Fig. 3 & 4)", p: "MATLAB function blocks turn θ into gating pulses. SHE compares θ against the solved switching angles; SVPWM uses phase-shifted carriers with third-harmonic injection.",
+    rows: [["SHE switching", "300 Hz (6× f₁)"], ["SVPWM carrier", "300 Hz (mf 6) / 750 Hz (mf 15)"], ["Modulation index M", "0.80"], ["SHE solver residual", "3.36 × 10⁻⁹"]] },
+  { id: "pv", x: 330, y: 14, w: 160, h: 50, t: "PV sub-arrays", s: "1 isolated source per cell",
+    h3: "Segmented PV sub-arrays", p: "Each CHB cell is fed by its own DC source representing one PV sub-array at the rated lunar-noon point. A single-diode irradiance model is the next extension.",
+    rows: [["Operating point", "1360 W/m² (lunar noon)"], ["DC per cell", "556 V"], ["Sources", "18 (6 per phase)"]] },
+  { id: "chb", x: 330, y: 105, w: 160, h: 90, t: "13-level CHB ×3", s: "6 H-bridge cells / phase",
+    h3: "Cascaded H-Bridge inverter", p: "Six series H-bridge cells per phase sum into a 13-level line-to-neutral staircase. Cell count is set by the voltage limits of radiation-hardened devices.",
+    rows: [["Rated power", "1 MW"], ["Cells per phase", "6"], ["Output levels", "13 (L-N)"], ["AC output", "4160 V L-L RMS"]] },
+  { id: "lcl", x: 530, y: 120, w: 120, h: 60, t: "LCL filter", s: "+ damping R",
+    h3: "Passive LCL filter", p: "Attenuates switching-frequency content. Its resonance sits above the dominant 19th–25th residual band, where it offers little help and can even amplify.",
+    rows: [["L₁ (inverter side)", "3 mH"], ["L₂ (bus side)", "1.5 mH"], ["C", "10 µF"], ["Damping R", "3.3 Ω"], ["f_res (Eq. 4)", "1.59 kHz"]] },
+  { id: "apf", x: 530, y: 222, w: 120, h: 56, t: "Active filter", s: "future work", future: true,
+    h3: "Active power filter (planned)", p: "dq-frame harmonic extraction injects an opposite-phase compensating current (Eq. 5). The next step is to aim it at the 19th–25th band the LCL can't reach.",
+    rows: [["Method", "Synchronous-frame (dq)"], ["Status", "Defined, not yet simulated"]] },
+  { id: "load", x: 690, y: 120, w: 110, h: 60, t: "R–L load bus", s: "3-wire",
+    h3: "Resistive–inductive load bus", p: "A representative spacecraft bus. Its impedance rises with harmonic order (|Zₙ| ≈ R + jnωL), which is why voltage THD runs well above current THD.",
+    rows: [["Z_base", "≈ 17.3 Ω"], ["Connection", "Three-wire (triplens cancel)"]] },
+  { id: "thd", x: 830, y: 105, w: 110, h: 90, t: "THD scopes", s: "I & V, per phase",
+    h3: "Measurement & FFT", p: "Discrete THD blocks and logged waveforms per phase. The FFT runs to the 50th harmonic over one fundamental cycle at 1 MHz.",
+    rows: [["Harmonics analysed", "up to 50th (2.5 kHz)"], ["Spectral resolution", "49.9975 Hz"], ["Noise floor", "~10⁻³ % of fundamental"], ["Inter-phase spread", "≤ 0.003 pp"]] },
+];
+const WIRES = [["theta", "mod"], ["mod", "chb"], ["pv", "chb", "v"], ["chb", "lcl"], ["lcl", "load"], ["load", "thd"], ["apf", "load", "apf"]];
+const chain = document.getElementById("chain");
+const defs = IP.svg("defs", {}, chain);
+const mk = IP.svg("marker", { id: "arr", viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto-start-reverse" }, defs);
+IP.svg("path", { d: "M0,0 L10,5 L0,10 z", fill: "#7a8190" }, mk);
+const B = Object.fromEntries(BLOCKS.map((b) => [b.id, b]));
+WIRES.forEach(([a, b, kind]) => {
+  const A = B[a], Z = B[b];
+  let d;
+  if (kind === "v") d = `M${A.x + A.w / 2},${A.y + A.h} L${Z.x + Z.w / 2},${Z.y}`;
+  else if (kind === "apf") d = `M${A.x + A.w},${A.y + A.h / 2} L${Z.x + Z.w / 2},${A.y + A.h / 2} L${Z.x + Z.w / 2},${Z.y + Z.h}`;
+  else d = `M${A.x + A.w},${A.y + A.h / 2} L${Z.x},${Z.y + Z.h / 2}`;
+  IP.svg("path", { d, class: "wire" + (kind === "apf" ? "" : " flow"), "stroke-dasharray": kind === "apf" ? "5 4" : null }, chain);
+});
+BLOCKS.forEach((b) => {
+  const g = IP.svg("g", { class: "blk" + (b.future ? " future" : ""), tabindex: 0, role: "button", "data-id": b.id }, chain);
+  IP.svg("rect", { x: b.x, y: b.y, width: b.w, height: b.h, rx: 6 }, g);
+  IP.text(g, b.x + b.w / 2, b.y + b.h / 2 - 2, b.t, { "text-anchor": "middle" });
+  IP.text(g, b.x + b.w / 2, b.y + b.h / 2 + 14, b.s, { "text-anchor": "middle", class: "sub" });
+  g.addEventListener("click", () => select(b.id));
+  g.addEventListener("keydown", (e) => { if (e.key === "Enter") select(b.id); });
+});
+function select(id) {
+  chain.querySelectorAll(".blk").forEach((g) => g.classList.toggle("on", g.dataset.id === id));
+  const b = B[id];
+  document.getElementById("detail").innerHTML = `<div class="kicker">${b.future ? "Planned extension" : "Model block"}</div><h3>${b.h3}</h3><p>${b.p}</p>
+    <table class="ptable">${b.rows.map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("")}</table>`;
+}
+select("chb");
+
+/* ---------- phase module animation ---------- */
+const VDC = 556, A = IP.SHE_ANGLES;
+const cellsBox = document.getElementById("cells");
+cellsBox.innerHTML = A.map((a, i) => `<div class="cellrow"><span>Cell ${i + 1} <span style="color:var(--muted);font-family:var(--mono);font-size:11px">α=${a.toFixed(1)}°</span></span><div class="cellbar"><div id="cb${i}"></div></div><span class="cellstate" id="cs${i}">0</span></div>`).join("");
+
+const st = document.getElementById("stairChart");
+const W = 640, H = 300, m = { l: 52, r: 12, t: 18, b: 28 };
+const sx = (th) => m.l + (th / 360) * (W - m.l - m.r), sy = (lv) => H / 2 - (lv / 6.5) * ((H - m.t - m.b) / 2);
+for (let lv = -6; lv <= 6; lv += 2) {
+  IP.svg("line", { x1: m.l, x2: W - m.r, y1: sy(lv), y2: sy(lv), class: lv ? "gridl" : "axis" }, st);
+  IP.text(st, m.l - 6, sy(lv) + 4, (lv * VDC) + "", { "text-anchor": "end" });
+}
+[0, 90, 180, 270, 360].forEach((d) => IP.text(st, sx(d), H - 8, d + "°", { "text-anchor": "middle" }));
+let sine = "";
+for (let d = 0; d <= 360; d += 2) sine += (d ? "L" : "M") + sx(d).toFixed(1) + "," + sy(IP.staircaseHarmonic(A, 1) * Math.sin((d * Math.PI) / 180)).toFixed(1);
+IP.svg("path", { d: sine, fill: "none", stroke: "#8b919c", "stroke-width": 1.3, "stroke-dasharray": "4 4" }, st);
+const ghost = IP.svg("path", { fill: "none", stroke: "#4f86e0", "stroke-opacity": 0.22, "stroke-width": 2 }, st);
+const trace = IP.svg("path", { fill: "none", stroke: "#4f86e0", "stroke-width": 2.4 }, st);
+const cursor = IP.svg("line", { y1: m.t, y2: H - m.b, stroke: "#f0c35a", "stroke-width": 1.2 }, st);
+const dot = IP.svg("circle", { r: 5, fill: "#f0c35a" }, st);
+function stairPath(to) {
+  let d = "", prev = null;
+  for (let th = 0; th <= to; th += 0.25) {
+    const lv = IP.staircaseValue(A, th);
+    if (prev === null) d = `M${sx(th).toFixed(1)},${sy(lv).toFixed(1)}`;
+    else if (lv !== prev) d += `L${sx(th).toFixed(1)},${sy(prev).toFixed(1)}L${sx(th).toFixed(1)},${sy(lv).toFixed(1)}`;
+    prev = lv;
+  }
+  return d + `L${sx(to).toFixed(1)},${sy(prev).toFixed(1)}`;
+}
+ghost.setAttribute("d", stairPath(360));
+IP.text(st, m.l + 4, m.t + 10, "phase voltage (V)");
+
+let theta = 0, playing = true, speed = 1;
+function render() {
+  trace.setAttribute("d", stairPath(theta));
+  cursor.setAttribute("x1", sx(theta)); cursor.setAttribute("x2", sx(theta));
+  const lv = IP.staircaseValue(A, theta);
+  dot.setAttribute("cx", sx(theta)); dot.setAttribute("cy", sy(lv));
+  const t = ((theta % 360) + 360) % 360, half = t < 180 ? t : t - 180, sign = t < 180 ? 1 : -1;
+  A.forEach((a, i) => {
+    const on = half >= a && half <= 180 - a;
+    document.getElementById("cb" + i).style.background = on ? (sign > 0 ? "var(--she)" : "var(--svpwm7)") : "transparent";
+    document.getElementById("cs" + i).textContent = on ? (sign > 0 ? "+556" : "−556") : "0";
+  });
+  document.getElementById("vout").textContent = (lv * VDC).toLocaleString("en-US") + " V";
+  document.getElementById("lvl").textContent = (lv > 0 ? "+" : "") + lv;
+  document.getElementById("thOut").textContent = theta.toFixed(1) + "°";
+  document.getElementById("theta").value = theta;
+}
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (playing) { theta = (theta + dt * 60 * speed) % 360; render(); }
+  requestAnimationFrame(loop);
+}
+if (matchMedia("(prefers-reduced-motion: reduce)").matches) { playing = false; theta = 90; }
+document.getElementById("play").addEventListener("click", (e) => {
+  playing = !playing; e.target.setAttribute("aria-pressed", playing); e.target.textContent = playing ? "❚❚ Pause" : "▶ Play";
+});
+document.getElementById("slow").addEventListener("click", (e) => {
+  speed = speed === 1 ? 0.25 : speed === 0.25 ? 3 : 1; e.target.textContent = "Speed: " + speed + "×";
+});
+document.getElementById("theta").addEventListener("input", (e) => { theta = +e.target.value; playing = false; const p = document.getElementById("play"); p.textContent = "▶ Play"; p.setAttribute("aria-pressed", false); render(); });
+render(); requestAnimationFrame(loop);
+</script>
+</body>
+</html>

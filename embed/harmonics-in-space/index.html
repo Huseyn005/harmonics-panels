@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why Harmonics Matter in Space — Interactive</title>
+<link rel="stylesheet" href="/assets/embed.css">
+<style>
+  .earth-space { display: grid; gap: 8px; }
+  .es-row { display: grid; grid-template-columns: 150px 1fr; gap: 12px; align-items: start; padding: 10px 12px; background: #1f2126; border: 1px solid var(--line); border-radius: 6px; }
+  .es-row b { font: 600 14px/1.3 var(--serif); }
+  .es-row span { font-size: 14px; color: #d4d8df; }
+  .switch { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; margin-bottom: 12px; }
+  .switch button { appearance: none; border: 0; background: transparent; color: var(--muted); padding: 8px 16px; font: 500 13px var(--sans); cursor: pointer; }
+  .switch button[aria-pressed="true"] { background: var(--gold); color: #1d1b16; }
+  @media (max-width: 520px) { .es-row { grid-template-columns: 1fr; gap: 4px; } }
+</style>
+</head>
+<body>
+<main class="embed">
+  <header class="embed-head">
+    <h1>Why Harmonics Matter in Space</h1>
+    <span class="tag">Interactive · Section 1–2</span>
+  </header>
+  <section class="embed-body">
+    <p class="lede">An inverter only <em>approximates</em> a sine wave with discrete voltage steps. Whatever it gets wrong shows up as harmonics: extra frequencies at whole multiples of the 50&nbsp;Hz fundamental.</p>
+
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" aria-selected="true" data-panel="p-build">Build a distorted wave</button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="p-levels">More levels, cleaner wave</button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="p-space">Earth vs. lunar surface</button>
+    </div>
+
+    <!-- TAB 1: Fourier builder -->
+    <div class="tabpanel" id="p-build">
+      <div class="grid-2">
+        <div>
+          <svg id="waveChart" class="chart" viewBox="0 0 640 280" role="img" aria-label="Waveform made of a fundamental plus selected harmonics"></svg>
+          <div class="legend"><span><i style="background:var(--muted)"></i>Ideal 50 Hz sine</span><span><i style="background:var(--gold)"></i>Distorted output x(t)</span></div>
+        </div>
+        <div>
+          <div class="stats">
+            <div class="stat"><div class="k">THD (Eq. 2)</div><div class="v" id="thdOut">0.00<small>%</small></div></div>
+            <div class="stat"><div class="k">Verdict</div><div class="v" style="font-size:15px;padding-top:6px" id="thdVerdict"></div></div>
+          </div>
+          <div class="btn-row" id="presets">
+            <button class="btn" data-preset="sine">Pure sine</button>
+            <button class="btn" data-preset="square">2-level square</button>
+            <button class="btn" data-preset="chb">13-level CHB (SHE)</button>
+          </div>
+          <div id="sliders"></div>
+        </div>
+      </div>
+      <p class="callout">THD = √(Σ Iₙ²) / I₁ × 100%. Every harmonic adds heat in conductors and windings, and on an isolated lunar bus there is no stiff grid to soak it up.</p>
+    </div>
+
+    <!-- TAB 2: Levels -->
+    <div class="tabpanel" id="p-levels" hidden>
+      <div class="grid-2">
+        <div>
+          <svg id="levelChart" class="chart" viewBox="0 0 640 280" role="img" aria-label="Staircase approximation of a sine wave"></svg>
+          <div class="legend"><span><i style="background:var(--muted)"></i>Target sine (M = 0.8)</span><span><i style="background:var(--she)"></i>Inverter output staircase</span></div>
+        </div>
+        <div>
+          <div class="control">
+            <label>H-bridge cells per phase <output id="cellsOut">6</output></label>
+            <input type="range" id="cells" min="1" max="6" step="1" value="6">
+          </div>
+          <div class="stats">
+            <div class="stat"><div class="k">Output levels</div><div class="v" id="lvlOut">13</div></div>
+            <div class="stat"><div class="k">Voltage THD to 50th</div><div class="v" id="lvlThd">–</div></div>
+          </div>
+          <div class="btn-row">
+            <button class="btn" id="useShe" aria-pressed="false">Use the paper's SHE angles</button>
+          </div>
+          <p class="note" id="lvlNote"></p>
+        </div>
+      </div>
+      <p class="callout">Each extra Cascaded H-Bridge cell adds one step to the staircase. With 6 cells per phase, this design produces a <b>13-level</b> line-to-neutral output.</p>
+    </div>
+
+    <!-- TAB 3: Earth vs Space -->
+    <div class="tabpanel" id="p-space" hidden>
+      <div class="switch" role="group" aria-label="Environment">
+        <button id="envEarth" aria-pressed="false">On Earth</button>
+        <button id="envMoon" aria-pressed="true">On the lunar surface</button>
+      </div>
+      <div class="earth-space" id="esRows"></div>
+      <p class="callout" id="esCallout"></p>
+    </div>
+
+    <div class="foot">IAC-26,C3,IP,5,x111168 · Mammadli &amp; Rasulzada · BHOS</div>
+  </section>
+</main>
+<script src="/assets/embed.js"></script>
+<script>
+IP.initTabs();
+
+/* ---------- Tab 1: Fourier builder ---------- */
+const ORDERS = [3, 5, 7, 19, 25];
+const amps = { 3: 0, 5: 0, 7: 0, 19: 0, 25: 0 };
+const che = IP.staircaseHarmonic(IP.SHE_ANGLES, 1);
+const PRESETS = {
+  sine: { 3: 0, 5: 0, 7: 0, 19: 0, 25: 0 },
+  square: { 3: 100 / 3, 5: 20, 7: 100 / 7, 19: 100 / 19, 25: 4 },
+  chb: Object.fromEntries(ORDERS.map((n) => [n, Math.abs(IP.staircaseHarmonic(IP.SHE_ANGLES, n) / che) * 100])),
+};
+
+const sliderBox = document.getElementById("sliders");
+ORDERS.forEach((n) => {
+  const wrap = document.createElement("div");
+  wrap.className = "control";
+  wrap.innerHTML = `<label>${n}${n === 3 ? "rd" : "th"} harmonic · ${n * 50} Hz <output id="o${n}">0.0%</output></label>
+    <input type="range" min="0" max="35" step="0.1" value="0" id="s${n}">`;
+  sliderBox.appendChild(wrap);
+  wrap.querySelector("input").addEventListener("input", (e) => { amps[n] = +e.target.value; markPreset(); drawWave(); });
+});
+
+function markPreset(active) {
+  document.querySelectorAll("#presets .btn").forEach((b) => b.setAttribute("aria-pressed", b.dataset.preset === active));
+}
+document.querySelectorAll("#presets .btn").forEach((b) =>
+  b.addEventListener("click", () => {
+    Object.assign(amps, PRESETS[b.dataset.preset]);
+    ORDERS.forEach((n) => (document.getElementById("s" + n).value = amps[n]));
+    markPreset(b.dataset.preset);
+    drawWave();
+  })
+);
+
+function axes(g, W, H, m, yMax, yLabel) {
+  IP.svg("line", { x1: m.l, x2: W - m.r, y1: H / 2, y2: H / 2, class: "axis" }, g);
+  IP.svg("line", { x1: m.l, x2: m.l, y1: m.t, y2: H - m.b, class: "axis" }, g);
+  IP.text(g, m.l - 6, m.t + 4, "+" + yMax, { "text-anchor": "end" });
+  IP.text(g, m.l - 6, H - m.b, "−" + yMax, { "text-anchor": "end" });
+  IP.text(g, m.l - 6, H / 2 + 4, "0", { "text-anchor": "end" });
+  IP.text(g, W - m.r, H - 6, "time → (2 cycles, 40 ms)", { "text-anchor": "end" });
+  if (yLabel) IP.text(g, m.l, m.t - 6, yLabel);
+}
+
+function drawWave() {
+  const el = document.getElementById("waveChart"); IP.clear(el);
+  const W = 640, H = 280, m = { l: 40, r: 12, t: 22, b: 22 };
+  axes(el, W, H, m, "1.5", "per-unit amplitude");
+  const N = 600, sx = (i) => m.l + (i / N) * (W - m.l - m.r), sy = (v) => H / 2 - (v / 1.5) * ((H - m.t - m.b) / 2);
+  let ideal = "", dist = "";
+  for (let i = 0; i <= N; i++) {
+    const th = (i / N) * 4 * Math.PI;
+    let v = Math.sin(th);
+    for (const n of ORDERS) v += (amps[n] / 100) * Math.sin(n * th);
+    ideal += (i ? "L" : "M") + sx(i).toFixed(1) + "," + sy(Math.sin(th)).toFixed(1);
+    dist += (i ? "L" : "M") + sx(i).toFixed(1) + "," + sy(Math.max(-1.5, Math.min(1.5, v))).toFixed(1);
+  }
+  IP.svg("path", { d: ideal, fill: "none", stroke: "#8b919c", "stroke-width": 1.4, "stroke-dasharray": "4 4" }, el);
+  IP.svg("path", { d: dist, fill: "none", stroke: "#f0c35a", "stroke-width": 2 }, el);
+
+  const t = Math.sqrt(ORDERS.reduce((s, n) => s + amps[n] ** 2, 0));
+  document.getElementById("thdOut").innerHTML = t.toFixed(2) + "<small>%</small>";
+  const v = document.getElementById("thdVerdict");
+  v.innerHTML = t < 1 ? '<span class="pill good">Very clean</span>' : t < 8 ? '<span class="pill warn">Noticeable</span>' : '<span class="pill bad">Heavily distorted</span>';
+  ORDERS.forEach((n) => (document.getElementById("o" + n).textContent = amps[n].toFixed(1) + "%"));
+}
+drawWave(); markPreset("sine");
+
+/* ---------- Tab 2: levels ---------- */
+let useShe = false;
+function stairs(cells, theta) {
+  if (useShe && cells === 6) return IP.staircaseValue(IP.SHE_ANGLES, theta) / cells;
+  // nearest-level modulation at M = 0.8, normalised to the total DC (cells × Vdc)
+  return Math.round(cells * 0.8 * Math.sin((theta * Math.PI) / 180)) / cells;
+}
+function drawLevels() {
+  const cells = +document.getElementById("cells").value;
+  const btn = document.getElementById("useShe");
+  btn.disabled = cells !== 6; if (cells !== 6) useShe = false;
+  btn.setAttribute("aria-pressed", useShe);
+  document.getElementById("cellsOut").textContent = cells;
+  document.getElementById("lvlOut").textContent = 2 * cells + 1;
+
+  const el = document.getElementById("levelChart"); IP.clear(el);
+  const W = 640, H = 280, m = { l: 40, r: 12, t: 22, b: 22 };
+  axes(el, W, H, m, "1.0", "fraction of total DC voltage");
+  const N = 1440, sx = (i) => m.l + (i / N) * (W - m.l - m.r), sy = (v) => H / 2 - v * ((H - m.t - m.b) / 2);
+  let target = "", out = "";
+  const samples = [];
+  for (let i = 0; i <= N; i++) {
+    const th = (i / N) * 720;
+    const v = stairs(cells, th);
+    if (i < N / 2) samples.push(v);
+    target += (i ? "L" : "M") + sx(i).toFixed(1) + "," + sy(0.8 * Math.sin((th * Math.PI) / 180)).toFixed(1);
+    out += (i ? "L" : "M") + sx(i).toFixed(1) + "," + sy(v).toFixed(1);
+  }
+  IP.svg("path", { d: target, fill: "none", stroke: "#8b919c", "stroke-width": 1.4, "stroke-dasharray": "4 4" }, el);
+  IP.svg("path", { d: out, fill: "none", stroke: "#4f86e0", "stroke-width": 2 }, el);
+  const sp = IP.spectrum(samples, 50);
+  document.getElementById("lvlThd").innerHTML = IP.thd(sp, 50).toFixed(1) + "<small>%</small>";
+  document.getElementById("lvlNote").textContent = useShe
+    ? "Switching angles α₁…α₆ from Table 2 (6.376° … 63.235°) place each step so that the 5th, 7th, 11th, 13th and 17th harmonics cancel. What remains sits at the 19th order and above."
+    : "Idealised nearest-level staircase before any filter. More cells → finer steps → lower distortion and lower stress on each device.";
+}
+document.getElementById("cells").addEventListener("input", drawLevels);
+document.getElementById("useShe").addEventListener("click", () => { useShe = !useShe; drawLevels(); });
+drawLevels();
+
+/* ---------- Tab 3: Earth vs lunar surface ---------- */
+const ROWS = [
+  ["Grid support", "A stiff commercial grid absorbs and stabilises harmonic currents.", "Stand-alone bus: no grid impedance to stabilise distortion, so harmonics hit loads directly."],
+  ["Rulebook", "Mature grid codes such as IEEE 519.", "Space-specific standards still in development; MIL-STD-461G CE101 (30 Hz–10 kHz) is the best available reference."],
+  ["Maintenance", "Technicians can reach and repair equipment.", "Long periods with no personnel available to repair failed units."],
+  ["Mass & volume", "Filter mass is cheap.", "Every kilogram of filter competes with payload; the power system is already a large share of vehicle mass."],
+  ["Environment", "Benign, controlled conditions.", "Large temperature swings, regolith dust, irradiance from ~200 to 1360 W/m²."],
+  ["What's at stake", "Equipment trips and losses.", "Life support, science instruments and communications on one isolated bus."],
+];
+let env = "moon";
+function drawEnv() {
+  document.getElementById("envEarth").setAttribute("aria-pressed", env === "earth");
+  document.getElementById("envMoon").setAttribute("aria-pressed", env === "moon");
+  document.getElementById("esRows").innerHTML = ROWS.map((r) => `<div class="es-row"><b>${r[0]}</b><span>${env === "earth" ? r[1] : r[2]}</span></div>`).join("");
+  document.getElementById("esCallout").textContent = env === "earth"
+    ? "On Earth, harmonic mitigation has the grid, maintenance crews and generous mass budgets on its side."
+    : "None of those advantages hold on a planetary surface, which is why a terrestrial mitigation solution cannot simply be reused in space.";
+}
+document.getElementById("envEarth").addEventListener("click", () => { env = "earth"; drawEnv(); });
+document.getElementById("envMoon").addEventListener("click", () => { env = "moon"; drawEnv(); });
+drawEnv();
+</script>
+</body>
+</html>
