@@ -1,32 +1,8 @@
-headersOrigin = "config"
-plugins = []
-redirects = []
-
-[functions]
-
-  [functions."*"]
-
 [build]
-publish = "/opt/build/repo/public"
-publishOrigin = "config"
-
-  [build.environment]
-
-  [build.processing]
-
-    [build.processing.css]
-
-    [build.processing.html]
-
-    [build.processing.images]
-
-    [build.processing.js]
-
-  [build.services]
+  publish = "."
 
 [[headers]]
-for = "/*"
-
+  for = "/*"
   [headers.values]
-  Content-Security-Policy = "frame-ancestors *"
-  Cache-Control = "public, max-age=0, must-revalidate"
+    Content-Security-Policy = "frame-ancestors *"
+    Cache-Control = "public, max-age=0, must-revalidate"
