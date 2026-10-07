@@ -30,10 +30,6 @@
 </head>
 <body>
 <main class="embed">
-  <header class="embed-head">
-    <h1>Model Gallery</h1>
-    <span class="tag">Interactive · Simulink model, Fig. 1–4</span>
-  </header>
   <section class="embed-body">
     <div class="tabs" role="tablist">
       <button class="tab" role="tab" aria-selected="true" data-panel="p-chain">Explore the system</button>
@@ -41,13 +37,11 @@
     </div>
 
     <div class="tabpanel" id="p-chain">
-      <p class="lede" style="font-size:15px">Click any block of the three-phase, 13-level CHB model to see what it does and how it was configured.</p>
       <svg id="chain" class="chart" viewBox="0 0 960 300" role="img" aria-label="System signal chain"></svg>
       <div class="card" id="detail" style="margin-top:12px"></div>
     </div>
 
     <div class="tabpanel" id="p-cell" hidden>
-      <p class="lede" style="font-size:15px">Each phase stacks six H-bridge cells (Fig. 2). Every cell switches on at its own SHE angle α<sub>k</sub> (Table 2), and their sum builds the 13-level staircase.</p>
       <div class="grid-2">
         <div>
           <svg id="stairChart" class="chart" viewBox="0 0 640 300" role="img" aria-label="Phase output staircase being built over one cycle"></svg>
