@@ -6,14 +6,6 @@
 <title>What We Set Out to Do — Interactive</title>
 <link rel="stylesheet" href="/assets/embed.css">
 <style>
-  .obj { cursor: pointer; transition: border-color .15s, transform .15s; position: relative; }
-  .obj:hover { border-color: #6a707b; }
-  .obj[aria-expanded="true"] { border-color: var(--gold); }
-  .obj .num { font: 600 34px/1 var(--serif); color: var(--gold); margin-bottom: 8px; }
-  .obj .more { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }
-  .obj[aria-expanded="true"] .more { display: block; }
-  .obj .hint { font-size: 12px; color: var(--muted); }
-  .obj[aria-expanded="true"] .hint { display: none; }
   .topo { cursor: pointer; }
   .topo[aria-pressed="true"] { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
   .topo .verdict { margin-top: 8px; }
@@ -35,20 +27,12 @@
     <span class="tag">Interactive · Section 1.2 &amp; 3.1</span>
   </header>
   <section class="embed-body">
-    <p class="lede">Most studies treat the switching strategy and the filter as two separate design problems. We treat them as <b>one coupled problem</b>, constrained by mass, heat and space-qualified hardware.</p>
-
     <div class="tabs" role="tablist">
-      <button class="tab" role="tab" aria-selected="true" data-panel="p-obj">Three objectives</button>
-      <button class="tab" role="tab" aria-selected="false" data-panel="p-topo">Choosing the topology</button>
+      <button class="tab" role="tab" aria-selected="true" data-panel="p-topo">Choosing the topology</button>
       <button class="tab" role="tab" aria-selected="false" data-panel="p-size">Space-qualified sizing</button>
     </div>
 
-    <div class="tabpanel" id="p-obj">
-      <div class="grid-3" id="objGrid"></div>
-      <p class="callout">Novelty: modulation strategy and filter design are evaluated <em>together</em>, within the mass and thermal limits of a planetary installation. To our knowledge this hadn't been done for megawatt-class surface power.</p>
-    </div>
-
-    <div class="tabpanel" id="p-topo" hidden>
+    <div class="tabpanel" id="p-topo">
       <p class="lede" style="font-size:15px">Click a multilevel topology to see how it fares on the lunar surface.</p>
       <div class="grid-3" id="topoGrid"></div>
       <p class="callout" id="topoCallout"></p>
@@ -95,31 +79,6 @@
 <script src="/assets/embed.js"></script>
 <script>
 IP.initTabs();
-
-const OBJ = [
-  { t: "Compare switching strategies", d: "Selective Harmonic Elimination (SHE) vs. Space Vector PWM (SVPWM) for a megawatt space inverter.",
-    how: "Three configurations at the rated point (M = 0.8): SHE at 300 Hz, SVPWM at the same 300 Hz, and SVPWM at its conventional 750 Hz.",
-    got: "At matched 300 Hz, SHE is marginally <b>better</b> (0.582% vs 0.657% current THD). SVPWM's big advantage comes from its higher switching frequency, not the method itself." },
-  { t: "Assess the passive LCL filter", d: "Can an LCL filter fit within the mass, size and thermal constraints of a surface installation?",
-    how: "L₁ = 3 mH, L₂ = 1.5 mH, C = 10 µF, R<sub>d</sub> = 3.3 Ω, sized from Z<sub>base</sub> ≈ 17.3 Ω at 4160 V / 1 MW.",
-    got: "Resonance lands at <b>1.59 kHz</b>, above the 19th–25th order residual band. The passive stage alone can't reach it, leaving a gap only active filtering can close." },
-  { t: "Check against standards", d: "Compare achieved harmonic levels with existing power-quality references.",
-    how: "THD by FFT up to the 50th order; MIL-STD-461G CE101 (30 Hz–10 kHz) as the benchmark for conducted emissions.",
-    got: "Low current THD alone does <b>not</b> prove compliance: CE101 limits absolute current, so the 19th–25th order residuals need a separate absolute-current check." },
-];
-document.getElementById("objGrid").innerHTML = OBJ.map((o, i) => `
-  <div class="card obj" role="button" tabindex="0" aria-expanded="false">
-    <div class="num">${["i", "ii", "iii"][i]}</div>
-    <h3>${o.t}</h3>
-    <p>${o.d}</p>
-    <div class="hint">Tap to see method &amp; finding ↓</div>
-    <div class="more"><div class="kicker">How</div><p>${o.how}</p><div class="kicker" style="margin-top:10px">What we found</div><p>${o.got}</p></div>
-  </div>`).join("");
-document.querySelectorAll(".obj").forEach((c) => {
-  const toggle = () => c.setAttribute("aria-expanded", c.getAttribute("aria-expanded") !== "true");
-  c.addEventListener("click", toggle);
-  c.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
-});
 
 const TOPO = [
   { id: "npc", n: "Neutral Point Clamped", pros: "Low switching loss; common in PV.", cons: "DC-link capacitor voltages drift out of balance when irradiance swings, as in the lunar dawn-to-noon transition.",
