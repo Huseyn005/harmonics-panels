@@ -162,9 +162,7 @@ function drawBars() {
 
   $("insight").innerHTML = fair
     ? "<b>At matched 300 Hz switching, SVPWM does not beat SHE.</b> SHE is marginally ahead on both current (0.582% vs 0.657%) and voltage THD (5.489% vs 7.305%)."
-    : on.sv7 && (on.she || on.sv3)
-      ? "SVPWM at 750 Hz looks dramatically better, but that advantage comes almost entirely from its <b>higher switching frequency</b>, not the modulation method. Press <b>Fair fight</b> to compare like with like."
-      : "Voltage THD runs well above current THD in every case: the R–L load's impedance rises with harmonic order, so small 19th–25th residual currents become larger voltage harmonics.";
+    : "Voltage THD runs well above current THD in every case: the R–L load's impedance rises with harmonic order, so small 19th–25th residual currents become larger voltage harmonics.";
 }
 drawBars();
 

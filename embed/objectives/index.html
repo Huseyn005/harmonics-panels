@@ -33,7 +33,7 @@
     </div>
 
     <div class="tabpanel" id="p-topo">
-      <p class="lede" style="font-size:15px">Click a multilevel topology to see how it fares on the lunar surface.</p>
+      <p class="lede" style="font-size:15px">Click a topology to compare.</p>
       <div class="grid-3" id="topoGrid"></div>
       <p class="callout" id="topoCallout"></p>
     </div>
@@ -81,11 +81,11 @@
 IP.initTabs();
 
 const TOPO = [
-  { id: "npc", n: "Neutral Point Clamped", pros: "Low switching loss; common in PV.", cons: "DC-link capacitor voltages drift out of balance when irradiance swings, as in the lunar dawn-to-noon transition.",
+  { id: "npc", n: "Neutral Point Clamped", pros: "Low switching loss.", cons: "Capacitor voltages drift when irradiance swings.",
     score: [["Irradiance variability", "bad"], ["Mass", "warn"], ["MW scalability", "warn"]], verdict: ["bad", "Excluded"] },
-  { id: "fc", n: "Flying Capacitor", pros: "Flexible level control; inherent capacitor balancing.", cons: "Needs very large flying capacitors and complex charge-balancing control, which conflicts with the mass budget.",
+  { id: "fc", n: "Flying Capacitor", pros: "Flexible level control.", cons: "Very large capacitors; conflicts with the mass budget.",
     score: [["Irradiance variability", "good"], ["Mass", "bad"], ["MW scalability", "warn"]], verdict: ["bad", "Excluded"] },
-  { id: "chb", n: "Cascaded H-Bridge", pros: "Modular, scalable to MW. Each cell is fed by its own PV sub-array, and a segmented array already provides those for free.", cons: "Needs multiple isolated DC sources, which is natural for a segmented PV field.",
+  { id: "chb", n: "Cascaded H-Bridge", pros: "Modular, MW-scalable; each cell has its own PV sub-array.", cons: "Needs isolated DC sources, natural for segmented PV.",
     score: [["Irradiance variability", "good"], ["Mass", "good"], ["MW scalability", "good"]], verdict: ["good", "Selected"] },
 ];
 const LBL = { good: "Strong", warn: "Fair", bad: "Weak" };
@@ -104,9 +104,9 @@ function drawTopo(sel) {
     c.addEventListener("keydown", (e) => { if (e.key === "Enter") drawTopo(c.dataset.id); });
   });
   document.getElementById("topoCallout").textContent = {
-    npc: "NPC was excluded: capacitor balancing is fragile exactly when lunar irradiance is changing fastest.",
-    fc: "FC was excluded: its large flying capacitors work against the mass constraint that governs every surface design.",
-    chb: "CHB was chosen: 6 cells per phase at 556 V give a 13-level, 4160 V, 1 MW system with no extra isolation hardware.",
+    npc: "NPC excluded: capacitor balancing is fragile when irradiance changes fastest.",
+    fc: "FC excluded: large capacitors conflict with the mass budget.",
+    chb: "CHB chosen: 6 cells × 556 V → 13 levels, 4160 V, 1 MW.",
   }[sel];
 }
 drawTopo("chb");
