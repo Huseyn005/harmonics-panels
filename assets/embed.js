@@ -102,3 +102,26 @@ document.querySelectorAll("svg.chart").forEach((s) => {
   s.parentNode.insertBefore(w, s);
   w.appendChild(s);
 });
+
+// Preview mode: when the frame is narrower than the full-size layout, render the page at its full-size
+// width and scale it down to fit, so a small card shows the same thing as fullscreen.
+(function () {
+  const DESIGN_W = 760, root = document.documentElement, main = document.querySelector(".embed");
+  if (!main) return;
+  function fit() {
+    const vw = root.clientWidth || window.innerWidth;
+    if (vw >= DESIGN_W) {
+      root.classList.remove("fit"); main.style.transform = ""; document.body.style.height = "";
+      return;
+    }
+    const s = vw / DESIGN_W;
+    root.classList.add("fit");
+    main.style.transform = "scale(" + s + ")";
+    document.body.style.height = Math.ceil(main.offsetHeight * s) + "px";
+  }
+  fit();
+  window.addEventListener("resize", fit);
+  window.addEventListener("tabchange", fit);
+  if (window.ResizeObserver) new ResizeObserver(fit).observe(main);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+})();

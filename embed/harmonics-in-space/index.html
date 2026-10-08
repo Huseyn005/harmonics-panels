@@ -6,14 +6,6 @@
 <title>Why Harmonics Matter in Space — Interactive</title>
 <link rel="stylesheet" href="/assets/embed.css">
 <style>
-  .earth-space { display: grid; gap: 8px; }
-  .es-row { display: grid; grid-template-columns: 150px 1fr; gap: 12px; align-items: start; padding: 10px 12px; background: #1f2126; border: 1px solid var(--line); border-radius: 6px; }
-  .es-row b { font: 600 14px/1.3 var(--serif); }
-  .es-row span { font-size: 14px; color: #d4d8df; }
-  .switch { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; margin-bottom: 12px; }
-  .switch button { appearance: none; border: 0; background: transparent; color: var(--muted); padding: 8px 16px; font: 500 13px var(--sans); cursor: pointer; }
-  .switch button[aria-pressed="true"] { background: var(--gold); color: #1d1b16; }
-  @media (max-width: 520px) { .es-row { grid-template-columns: 1fr; gap: 4px; } }
 </style>
 </head>
 <body>
@@ -23,7 +15,6 @@
     <div class="tabs" role="tablist">
       <button class="tab" role="tab" aria-selected="true" data-panel="p-build">Build a distorted wave</button>
       <button class="tab" role="tab" aria-selected="false" data-panel="p-levels">More levels, cleaner wave</button>
-      <button class="tab" role="tab" aria-selected="false" data-panel="p-space">Earth vs. lunar surface</button>
     </div>
 
     <!-- TAB 1: Fourier builder -->
@@ -74,16 +65,6 @@
       <p class="callout">Each extra Cascaded H-Bridge cell adds one step to the staircase. With 6 cells per phase, this design produces a <b>13-level</b> line-to-neutral output.</p>
     </div>
 
-    <!-- TAB 3: Earth vs Space -->
-    <div class="tabpanel" id="p-space" hidden>
-      <div class="switch" role="group" aria-label="Environment">
-        <button id="envEarth" aria-pressed="false">On Earth</button>
-        <button id="envMoon" aria-pressed="true">On the lunar surface</button>
-      </div>
-      <div class="earth-space" id="esRows"></div>
-      <p class="callout" id="esCallout"></p>
-    </div>
-
     <div class="foot">IAC-26,C3,IP,5,x111168 · Huseyn &amp; Rana · BHOS</div>
   </section>
 </main>
@@ -124,18 +105,21 @@ document.querySelectorAll("#presets .btn").forEach((b) =>
 );
 
 function axes(g, W, H, m, yMax, yLabel) {
+  // plot area is inset on all four sides so labels never sit on top of the curves
+  IP.svg("line", { x1: m.l, x2: W - m.r, y1: m.t, y2: m.t, class: "gridl" }, g);
+  IP.svg("line", { x1: m.l, x2: W - m.r, y1: H - m.b, y2: H - m.b, class: "gridl" }, g);
   IP.svg("line", { x1: m.l, x2: W - m.r, y1: H / 2, y2: H / 2, class: "axis" }, g);
   IP.svg("line", { x1: m.l, x2: m.l, y1: m.t, y2: H - m.b, class: "axis" }, g);
-  IP.text(g, m.l - 6, m.t + 4, "+" + yMax, { "text-anchor": "end" });
-  IP.text(g, m.l - 6, H - m.b, "−" + yMax, { "text-anchor": "end" });
-  IP.text(g, m.l - 6, H / 2 + 4, "0", { "text-anchor": "end" });
-  IP.text(g, W - m.r, H - 6, "time → (2 cycles, 40 ms)", { "text-anchor": "end" });
-  if (yLabel) IP.text(g, m.l, m.t - 6, yLabel);
+  IP.text(g, m.l - 8, m.t + 5, "+" + yMax, { "text-anchor": "end" });
+  IP.text(g, m.l - 8, H - m.b + 5, "−" + yMax, { "text-anchor": "end" });
+  IP.text(g, m.l - 8, H / 2 + 5, "0", { "text-anchor": "end" });
+  IP.text(g, W - m.r, H - 8, "time → (2 cycles, 40 ms)", { "text-anchor": "end" });
+  if (yLabel) IP.text(g, 6, 20, yLabel);
 }
 
 function drawWave() {
   const el = document.getElementById("waveChart"); IP.clear(el);
-  const W = 640, H = 280, m = { l: 40, r: 12, t: 22, b: 22 };
+  const W = 640, H = 280, m = { l: 58, r: 16, t: 34, b: 38 };
   axes(el, W, H, m, "1.5", "per-unit amplitude");
   const N = 600, sx = (i) => m.l + (i / N) * (W - m.l - m.r), sy = (v) => H / 2 - (v / 1.5) * ((H - m.t - m.b) / 2);
   let ideal = "", dist = "";
@@ -173,7 +157,7 @@ function drawLevels() {
   document.getElementById("lvlOut").textContent = 2 * cells + 1;
 
   const el = document.getElementById("levelChart"); IP.clear(el);
-  const W = 640, H = 280, m = { l: 40, r: 12, t: 22, b: 22 };
+  const W = 640, H = 280, m = { l: 58, r: 16, t: 34, b: 38 };
   axes(el, W, H, m, "1.0", "fraction of total DC voltage");
   const N = 1440, sx = (i) => m.l + (i / N) * (W - m.l - m.r), sy = (v) => H / 2 - v * ((H - m.t - m.b) / 2);
   let target = "", out = "";
@@ -197,27 +181,6 @@ document.getElementById("cells").addEventListener("input", drawLevels);
 document.getElementById("useShe").addEventListener("click", () => { useShe = !useShe; drawLevels(); });
 drawLevels();
 
-/* ---------- Tab 3: Earth vs lunar surface ---------- */
-const ROWS = [
-  ["Grid support", "A stiff commercial grid absorbs and stabilises harmonic currents.", "Stand-alone bus: no grid impedance to stabilise distortion, so harmonics hit loads directly."],
-  ["Rulebook", "Mature grid codes such as IEEE 519.", "Space-specific standards still in development; MIL-STD-461G CE101 (30 Hz–10 kHz) is the best available reference."],
-  ["Maintenance", "Technicians can reach and repair equipment.", "Long periods with no personnel available to repair failed units."],
-  ["Mass & volume", "Filter mass is cheap.", "Every kilogram of filter competes with payload; the power system is already a large share of vehicle mass."],
-  ["Environment", "Benign, controlled conditions.", "Large temperature swings, regolith dust, irradiance from ~200 to 1360 W/m²."],
-  ["What's at stake", "Equipment trips and losses.", "Life support, science instruments and communications on one isolated bus."],
-];
-let env = "moon";
-function drawEnv() {
-  document.getElementById("envEarth").setAttribute("aria-pressed", env === "earth");
-  document.getElementById("envMoon").setAttribute("aria-pressed", env === "moon");
-  document.getElementById("esRows").innerHTML = ROWS.map((r) => `<div class="es-row"><b>${r[0]}</b><span>${env === "earth" ? r[1] : r[2]}</span></div>`).join("");
-  document.getElementById("esCallout").textContent = env === "earth"
-    ? "On Earth, harmonic mitigation has the grid, maintenance crews and generous mass budgets on its side."
-    : "None of those advantages hold on a planetary surface, which is why a terrestrial mitigation solution cannot simply be reused in space.";
-}
-document.getElementById("envEarth").addEventListener("click", () => { env = "earth"; drawEnv(); });
-document.getElementById("envMoon").addEventListener("click", () => { env = "moon"; drawEnv(); });
-drawEnv();
 </script>
 </body>
 </html>
